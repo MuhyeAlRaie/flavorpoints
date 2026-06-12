@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuthStore } from '@/store/auth-store'
 import { useAppStore, type AdminView } from '@/store/app-store'
 import { api } from '@/lib/api'
@@ -17,7 +17,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   BarChart3, Settings, UtensilsCrossed, Gift, Users, Coins,
   TrendingUp, Gamepad2, LogOut, Plus, Trash2, Edit3, Save, X,
-  ShoppingBag, Award, Target, UsersRound, Zap
+  ShoppingBag, Award, Target, UsersRound, Zap, ImagePlus, Upload, Eye, EyeOff
 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -49,7 +49,11 @@ export function AdminDashboard() {
   // Edit states
   const [editingMenuItem, setEditingMenuItem] = useState<string | null>(null)
   const [editingReward, setEditingReward] = useState<string | null>(null)
-  const [newMenuItem, setNewMenuItem] = useState({ name: '', description: '', price: '', category: 'Main' })
+  const [newMenuItem, setNewMenuItem] = useState({ name: '', description: '', price: '', category: 'Main', imageUrl: '' })
+  const [newMenuImageFile, setNewMenuImageFile] = useState<File | null>(null)
+  const [editingMenuItemId, setEditingMenuItemId] = useState<string | null>(null)
+  const menuImageInputRef = useRef<HTMLInputElement>(null)
+  const editMenuImageInputRef = useRef<HTMLInputElement>(null)
   const [newReward, setNewReward] = useState({ name: '', description: '', pointsCost: '' })
   const [newMission, setNewMission] = useState({ type: 'custom', title: '', target: '', points: '', forAll: true, customerId: '' })
   const [editingMission, setEditingMission] = useState<string | null>(null)
@@ -68,7 +72,7 @@ export function AdminDashboard() {
       const [analyticsData, settingsData, menuData, rewardsData] = await Promise.all([
         api.getAnalytics(),
         api.getSettings(),
-        api.getMenu(),
+        api.getAllMenuItems(),
         api.getRewards(),
       ])
       setAnalytics(analyticsData)
@@ -120,13 +124,19 @@ export function AdminDashboard() {
       return
     }
     try {
+      let imageUrl = newMenuItem.imageUrl
+      if (newMenuImageFile) {
+        imageUrl = await api.uploadMenuImage(newMenuImageFile)
+      }
       await api.createMenuItem({
         name: newMenuItem.name,
         description: newMenuItem.description,
         price: parseFloat(newMenuItem.price),
         category: newMenuItem.category,
+        imageUrl,
       })
-      setNewMenuItem({ name: '', description: '', price: '', category: 'Main' })
+      setNewMenuItem({ name: '', description: '', price: '', category: 'Main', imageUrl: '' })
+      setNewMenuImageFile(null)
       toast.success(t('menuItemCreated'))
       fetchData()
     } catch (error: any) {
@@ -136,11 +146,41 @@ export function AdminDashboard() {
 
   const handleDeleteMenuItem = async (id: string) => {
     try {
+      const item = menuItems.find(i => i.id === id)
+      if (item?.imageUrl) {
+        await api.deleteMenuImage(item.imageUrl)
+      }
       await api.deleteMenuItem(id)
       toast.success(t('menuItemDeleted'))
       fetchData()
     } catch (error: any) {
       toast.error(error.message || t('failedToDelete'))
+    }
+  }
+
+  const handleUpdateMenuItemImage = async (id: string, file: File) => {
+    try {
+      const item = menuItems.find(i => i.id === id)
+      if (item?.imageUrl) {
+        await api.deleteMenuImage(item.imageUrl)
+      }
+      const imageUrl = await api.uploadMenuImage(file)
+      await api.updateMenuItem(id, { imageUrl })
+      setEditingMenuItemId(null)
+      toast.success(t('imageUpdated'))
+      fetchData()
+    } catch (error: any) {
+      toast.error(error.message || t('failedToUploadImage'))
+    }
+  }
+
+  const handleToggleMenuItemAvailability = async (id: string, currentAvailable: boolean) => {
+    try {
+      await api.updateMenuItem(id, { available: !currentAvailable })
+      toast.success(!currentAvailable ? t('itemNowAvailable') : t('itemNowHidden'))
+      fetchData()
+    } catch (error: any) {
+      toast.error(error.message || t('failedToUpdate'))
     }
   }
 
@@ -474,6 +514,7 @@ export function AdminDashboard() {
         {t('menuManagement')}
       </h2>
 
+      {/* Add Menu Item Form */}
       <Card className="glass-card border-0">
         <CardContent className="p-4 space-y-3">
           <h3 className="text-sm font-semibold flex items-center gap-2">
@@ -511,41 +552,169 @@ export function AdminDashboard() {
                 <option key={c} value={c} className="bg-gray-900">{c}</option>
               ))}
             </select>
-            <Button onClick={handleCreateMenuItem} className="glass-button-success h-10">
-              <Plus className="w-4 h-4" />
-            </Button>
           </div>
+
+          {/* Image Upload */}
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground">{t('itemImage')}</Label>
+            <input
+              ref={menuImageInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+              className="hidden"
+              onChange={e => {
+                const file = e.target.files?.[0]
+                if (file) {
+                  setNewMenuImageFile(file)
+                  const reader = new FileReader()
+                  reader.onloadend = () => {
+                    setNewMenuItem(prev => ({ ...prev, imageUrl: reader.result as string }))
+                  }
+                  reader.readAsDataURL(file)
+                }
+              }}
+            />
+            <div
+              className="border-2 border-dashed border-white/10 rounded-xl p-3 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-purple-500/30 transition-colors"
+              onClick={() => menuImageInputRef.current?.click()}
+            >
+              {newMenuItem.imageUrl ? (
+                <div className="relative w-full">
+                  <img
+                    src={newMenuItem.imageUrl}
+                    alt="Preview"
+                    className="w-full h-32 object-cover rounded-lg"
+                  />
+                  <button
+                    type="button"
+                    className="absolute top-1 right-1 bg-black/60 rounded-full p-1 hover:bg-black/80"
+                    onClick={e => {
+                      e.stopPropagation()
+                      setNewMenuItem(prev => ({ ...prev, imageUrl: '' }))
+                      setNewMenuImageFile(null)
+                      if (menuImageInputRef.current) menuImageInputRef.current.value = ''
+                    }}
+                  >
+                    <X className="w-3 h-3 text-white" />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <ImagePlus className="w-8 h-8 text-muted-foreground" />
+                  <p className="text-xs text-muted-foreground">{t('clickToUploadImage')}</p>
+                  <p className="text-[10px] text-muted-foreground/60">PNG, JPG, WebP (max 5MB)</p>
+                </>
+              )}
+            </div>
+          </div>
+
+          <Button onClick={handleCreateMenuItem} className="glass-button-success h-10 w-full">
+            <Plus className="w-4 h-4 mr-2" />
+            {t('addMenuItem')}
+          </Button>
         </CardContent>
       </Card>
 
-      <ScrollArea className="max-h-[500px]">
+      {/* Menu Items List */}
+      <ScrollArea className="max-h-[600px]">
         <div className="space-y-3">
           {menuItems.map(item => (
-            <Card key={item.id} className="glass-card border-0">
-              <CardContent className="p-4 flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-semibold text-sm truncate">{item.name}</h4>
-                    <Badge variant="outline" className="text-[10px] shrink-0 border-purple-500/30 text-purple-400">
-                      {item.category}
-                    </Badge>
+            <Card key={item.id} className={`glass-card border-0 ${!item.available ? 'opacity-50' : ''}`}>
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  {/* Item Image */}
+                  <div className="relative shrink-0">
+                    {item.imageUrl ? (
+                      <img
+                        src={item.imageUrl}
+                        alt={item.name}
+                        className="w-16 h-16 object-cover rounded-lg"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-lg bg-white/5 flex items-center justify-center">
+                        <ImagePlus className="w-6 h-6 text-muted-foreground/40" />
+                      </div>
+                    )}
+                    {!item.available && (
+                      <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                        <EyeOff className="w-5 h-5 text-white/60" />
+                      </div>
+                    )}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5 truncate">{item.description}</p>
-                  <p className="text-sm font-bold text-green-400 mt-1">${item.price.toFixed(2)}</p>
+
+                  {/* Item Details */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-semibold text-sm truncate">{item.name}</h4>
+                      <Badge variant="outline" className="text-[10px] shrink-0 border-purple-500/30 text-purple-400">
+                        {item.category}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">{item.description}</p>
+                    <p className="text-sm font-bold text-green-400 mt-1">${item.price.toFixed(2)}</p>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex flex-col gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={`h-8 w-8 ${item.available ? 'text-green-400 hover:text-green-300 hover:bg-green-500/10' : 'text-muted-foreground hover:text-white hover:bg-white/5'}`}
+                      onClick={() => handleToggleMenuItemAvailability(item.id, item.available)}
+                      title={item.available ? t('hideFromMenu') : t('showInMenu')}
+                    >
+                      {item.available ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
+                      onClick={() => {
+                        setEditingMenuItemId(item.id)
+                        setTimeout(() => editMenuImageInputRef.current?.click(), 0)
+                      }}
+                      title={t('changeImage')}
+                    >
+                      <Upload className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                      onClick={() => handleDeleteMenuItem(item.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                  onClick={() => handleDeleteMenuItem(item.id)}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
               </CardContent>
             </Card>
           ))}
         </div>
       </ScrollArea>
+
+      {/* Hidden file input for editing existing menu item images */}
+      <input
+        ref={editMenuImageInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+        className="hidden"
+        onChange={e => {
+          const file = e.target.files?.[0]
+          if (file && editingMenuItemId) {
+            handleUpdateMenuItemImage(editingMenuItemId, file)
+          }
+          // Reset the input so the same file can be selected again
+          if (editMenuImageInputRef.current) editMenuImageInputRef.current.value = ''
+        }}
+      />
+
+      {menuItems.length === 0 && (
+        <div className="glass-card p-8 text-center">
+          <UtensilsCrossed className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">{t('noMenuItemsYet')}</p>
+        </div>
+      )}
     </div>
   )
 

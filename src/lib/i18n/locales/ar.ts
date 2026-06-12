@@ -188,6 +188,17 @@ const ar: Record<string, string> = {
   menuItemDeleted: 'تم حذف عنصر القائمة!',
   failedToCreateMenuItem: 'فشل إنشاء عنصر القائمة',
   failedToDelete: 'فشل الحذف',
+  itemImage: 'صورة العنصر',
+  clickToUploadImage: 'انقر لرفع صورة',
+  changeImage: 'تغيير الصورة',
+  imageUpdated: 'تم تحديث الصورة!',
+  failedToUploadImage: 'فشل رفع الصورة',
+  noMenuItemsYet: 'لا توجد عناصر في القائمة بعد',
+  hideFromMenu: 'إخفاء من القائمة',
+  showInMenu: 'إظهار في القائمة',
+  itemNowAvailable: 'العنصر مرئي الآن في القائمة',
+  itemNowHidden: 'العنصر مخفي الآن من القائمة',
+  failedToUpdate: 'فشل التحديث',
 
   // Admin Rewards
   addReward: 'إضافة مكافأة',

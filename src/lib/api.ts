@@ -146,6 +146,51 @@ class ApiClient {
     return { menuItems: (data || []).map(item => ({ ...item, imageUrl: item.image_url, createdAt: item.created_at, updatedAt: item.updated_at })) }
   }
 
+  async getAllMenuItems() {
+    const { data, error } = await supabase
+      .from('menu_items')
+      .select('*')
+      .order('category', { ascending: true })
+
+    if (error) throw new Error(error.message)
+    return { menuItems: (data || []).map(item => ({ ...item, imageUrl: item.image_url, createdAt: item.created_at, updatedAt: item.updated_at })) }
+  }
+
+  async uploadMenuImage(file: File): Promise<string> {
+    const ext = file.name.split('.').pop() || 'png'
+    const fileName = `menu-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('menu-images')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false,
+      })
+
+    if (uploadError) throw new Error('Image upload failed: ' + uploadError.message)
+
+    const { data: urlData } = supabase.storage
+      .from('menu-images')
+      .getPublicUrl(fileName)
+
+    return urlData.publicUrl
+  }
+
+  async deleteMenuImage(imageUrl: string): Promise<void> {
+    if (!imageUrl) return
+    try {
+      // Extract file path from URL
+      const url = new URL(imageUrl)
+      const pathParts = url.pathname.split('/object/public/menu-images/')
+      if (pathParts.length > 1) {
+        const filePath = pathParts[1]
+        await supabase.storage.from('menu-images').remove([filePath])
+      }
+    } catch {
+      // Ignore errors when deleting old images
+    }
+  }
+
   async createMenuItem(data: { name: string; description: string; price: number; category: string; imageUrl?: string }) {
     const { data: result, error } = await supabase.from('menu_items').insert({
       name: data.name,

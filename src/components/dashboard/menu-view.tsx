@@ -5,7 +5,7 @@ import { useT } from '@/lib/i18n'
 import { api } from '@/lib/api'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { UtensilsCrossed, Coffee, Salad, Beef, Cake, Flame } from 'lucide-react'
+import { UtensilsCrossed, Coffee, Salad, Beef, Cake, Flame, ImageOff } from 'lucide-react'
 
 interface MenuItem {
   id: string
@@ -40,6 +40,7 @@ export function MenuView() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [activeCategory, setActiveCategory] = useState('All')
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     api.getMenu()
@@ -53,6 +54,10 @@ export function MenuView() {
     ? menuItems
     : menuItems.filter(item => item.category === activeCategory)
 
+  const handleImageError = (id: string) => {
+    setImageErrors(prev => new Set(prev).add(id))
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -63,7 +68,7 @@ export function MenuView() {
         <div className="grid grid-cols-2 gap-4">
           {[1, 2, 3, 4].map(i => (
             <div key={i} className="glass-card p-4 animate-pulse">
-              <div className="w-full h-16 rounded-lg bg-white/5 mb-3" />
+              <div className="w-full h-24 rounded-lg bg-white/5 mb-3" />
               <div className="h-4 bg-white/5 rounded mb-2" />
               <div className="h-3 bg-white/5 rounded w-2/3" />
             </div>
@@ -105,35 +110,51 @@ export function MenuView() {
         {filteredItems.map(item => {
           const CatIcon = CATEGORY_ICONS[item.category] || UtensilsCrossed
           const colorClass = CATEGORY_COLORS[item.category] || 'from-purple-500/20 to-indigo-500/20'
+          const hasImage = item.imageUrl && !imageErrors.has(item.id)
 
           return (
             <Card key={item.id} className="glass-card border-0 glass-card-hover overflow-hidden">
-              <CardContent className="p-4">
-                {/* Item Icon/Illustration */}
-                <div className={`w-full h-20 rounded-xl bg-gradient-to-br ${colorClass} flex items-center justify-center mb-3`}>
-                  <CatIcon className="w-10 h-10 text-white/40" />
+              <CardContent className="p-0">
+                {/* Item Image */}
+                <div className="w-full h-28 relative overflow-hidden">
+                  {hasImage ? (
+                    <img
+                      src={item.imageUrl}
+                      alt={item.name}
+                      className="w-full h-full object-cover"
+                      onError={() => handleImageError(item.id)}
+                    />
+                  ) : (
+                    <div className={`w-full h-full bg-gradient-to-br ${colorClass} flex items-center justify-center`}>
+                      <CatIcon className="w-10 h-10 text-white/40" />
+                    </div>
+                  )}
+                  {/* Price overlay */}
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-3 py-2">
+                    <p className="text-sm font-bold text-green-400">
+                      ${item.price.toFixed(2)}
+                    </p>
+                  </div>
                 </div>
 
-                {/* Category Badge */}
-                <Badge
-                  variant="outline"
-                  className="text-[9px] px-1.5 py-0 mb-2 border-white/10 text-muted-foreground"
-                >
-                  {item.category}
-                </Badge>
+                {/* Item Info */}
+                <div className="p-3 pt-2">
+                  {/* Category Badge */}
+                  <Badge
+                    variant="outline"
+                    className="text-[9px] px-1.5 py-0 mb-1.5 border-white/10 text-muted-foreground"
+                  >
+                    {item.category}
+                  </Badge>
 
-                {/* Name */}
-                <h3 className="font-semibold text-sm leading-tight">{item.name}</h3>
+                  {/* Name */}
+                  <h3 className="font-semibold text-sm leading-tight">{item.name}</h3>
 
-                {/* Description */}
-                <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
-                  {item.description}
-                </p>
-
-                {/* Price */}
-                <p className="text-base font-bold text-green-400 mt-2">
-                  ${item.price.toFixed(2)}
-                </p>
+                  {/* Description */}
+                  <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
+                    {item.description}
+                  </p>
+                </div>
               </CardContent>
             </Card>
           )

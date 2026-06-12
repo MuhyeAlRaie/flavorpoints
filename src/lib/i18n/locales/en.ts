@@ -188,6 +188,17 @@ const en = {
   menuItemDeleted: 'Menu item deleted!',
   failedToCreateMenuItem: 'Failed to create menu item',
   failedToDelete: 'Failed to delete',
+  itemImage: 'Item Image',
+  clickToUploadImage: 'Click to upload image',
+  changeImage: 'Change Image',
+  imageUpdated: 'Image updated!',
+  failedToUploadImage: 'Failed to upload image',
+  noMenuItemsYet: 'No menu items yet',
+  hideFromMenu: 'Hide from menu',
+  showInMenu: 'Show in menu',
+  itemNowAvailable: 'Item is now visible in menu',
+  itemNowHidden: 'Item is now hidden from menu',
+  failedToUpdate: 'Failed to update',
 
   // Admin Rewards
   addReward: 'Add Reward',

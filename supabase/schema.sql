@@ -677,6 +677,40 @@ INSERT INTO public.menu_items (name, description, price, category) VALUES
   ('Cheesecake', 'New York style cheesecake', 7.99, 'Desserts')
 ON CONFLICT DO NOTHING;
 
+-- =============================================
+-- 7. STORAGE BUCKETS & POLICIES
+-- =============================================
+
+-- Create menu-images storage bucket (run in SQL editor or via Supabase Dashboard → Storage)
+-- NOTE: Storage buckets are best created via the Supabase Dashboard:
+--   1. Go to Storage → New Bucket
+--   2. Name: "menu-images"
+--   3. Make it PUBLIC (so images are accessible without auth)
+--   4. File size limit: 5MB
+--   5. Allowed MIME types: image/png, image/jpeg, image/jpg, image/webp, image/gif
+--
+-- Then run these RLS policies in the SQL Editor:
+
+-- Allow public read access to menu images
+CREATE POLICY "Public read menu images"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'menu-images');
+
+-- Allow admins to upload menu images
+CREATE POLICY "Admins can upload menu images"
+  ON storage.objects FOR INSERT
+  WITH CHECK (bucket_id = 'menu-images' AND public.is_admin());
+
+-- Allow admins to update menu images
+CREATE POLICY "Admins can update menu images"
+  ON storage.objects FOR UPDATE
+  USING (bucket_id = 'menu-images' AND public.is_admin());
+
+-- Allow admins to delete menu images
+CREATE POLICY "Admins can delete menu images"
+  ON storage.objects FOR DELETE
+  USING (bucket_id = 'menu-images' AND public.is_admin());
+
 -- Rewards
 INSERT INTO public.rewards (name, description, points_cost) VALUES
   ('Free Espresso', 'Enjoy a free espresso on us!', 100),
