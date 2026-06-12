@@ -424,14 +424,36 @@ class ApiClient {
   // ========== EMPLOYEE ==========
 
   async searchCustomer(phone: string) {
-    const { data, error } = await supabase
+    // Find customer by phone
+    const { data: customer, error: customerError } = await supabase
       .from('customers')
-      .select('*, visits(*, order(created_at, ascending: false)), missions(*)')
+      .select('*')
       .eq('phone', phone)
       .single()
 
-    if (error) throw new Error('Customer not found')
-    return { customer: data }
+    if (customerError || !customer) throw new Error('Customer not found')
+
+    // Get their visits separately
+    const { data: visits } = await supabase
+      .from('visits')
+      .select('*')
+      .eq('customer_id', customer.id)
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    // Get their missions
+    const { data: missions } = await supabase
+      .from('missions')
+      .select('*')
+      .eq('customer_id', customer.id)
+
+    return {
+      customer: {
+        ...customer,
+        visits: visits || [],
+        missions: missions || [],
+      }
+    }
   }
 
   // ========== SEED (not available with Supabase - use SQL) ==========
