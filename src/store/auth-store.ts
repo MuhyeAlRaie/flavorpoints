@@ -23,6 +23,7 @@ interface AuthState {
   isAuthenticated: boolean
   login: (user: User, token: string) => void
   logout: () => Promise<void>
+  clearAuth: () => void
   updateUser: (user: Partial<User>) => void
 }
 
@@ -34,9 +35,15 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       login: (user, token) => set({ user, token, isAuthenticated: true }),
       logout: async () => {
-        await supabase.auth.signOut()
+        // Clear local state first, then sign out from Supabase
         set({ user: null, token: null, isAuthenticated: false })
+        try {
+          await supabase.auth.signOut()
+        } catch {
+          // Ignore signOut errors (already signed out)
+        }
       },
+      clearAuth: () => set({ user: null, token: null, isAuthenticated: false }),
       updateUser: (updates) => set((state) => ({
         user: state.user ? { ...state.user, ...updates } : null
       })),

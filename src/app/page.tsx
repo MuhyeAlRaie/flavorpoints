@@ -77,7 +77,7 @@ function SetupGuide() {
 }
 
 export default function HomePage() {
-  const { isAuthenticated, user, login, logout } = useAuthStore()
+  const { isAuthenticated, user, login, clearAuth } = useAuthStore()
   const [isChecking, setIsChecking] = useState(true)
   const initRef = useRef(false)
 
@@ -119,12 +119,13 @@ export default function HomePage() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
       if (event === 'SIGNED_OUT') {
-        logout()
+        // Just clear local state - don't call supabase.auth.signOut() again
+        clearAuth()
       }
     })
 
     return () => subscription.unsubscribe()
-  }, [login, logout])
+  }, [login, clearAuth])
 
   // Show setup guide if Supabase isn't configured
   if (showSetupGuide) {
