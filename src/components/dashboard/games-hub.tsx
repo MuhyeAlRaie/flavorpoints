@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useAppStore, type GameType } from '@/store/app-store'
 import { useAuthStore } from '@/store/auth-store'
+import { useT } from '@/lib/i18n'
 import { api } from '@/lib/api'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -25,38 +26,39 @@ interface GamesHubProps {
   onRefresh: () => void
 }
 
-const GAME_INFO: Record<GameType, { name: string; icon: any; description: string; color: string; emoji: string }> = {
-  burger_catch: {
-    name: 'Burger Catch',
-    icon: Hamburger,
-    description: 'Catch falling burgers to win points! Move your plate left and right.',
-    color: 'from-amber-500 to-orange-500',
-    emoji: '🍔',
-  },
-  coffee_shooter: {
-    name: 'Coffee Shooter',
-    icon: Coffee,
-    description: 'Shoot coffee cups as they appear! Test your reflexes.',
-    color: 'from-amber-700 to-yellow-600',
-    emoji: '☕',
-  },
-  grand_wheel: {
-    name: 'Grand Wheel',
-    icon: CircleDot,
-    description: 'Spin the wheel for a chance at big rewards! Monthly cooldown.',
-    color: 'from-purple-500 to-pink-500',
-    emoji: '🎡',
-  },
-}
-
 export function GamesHub({ onRefresh }: GamesHubProps) {
   const { activeGame, setActiveGame } = useAppStore()
   const { user, updateUser } = useAuthStore()
+  const { t } = useT()
   const [gameStatuses, setGameStatuses] = useState<Record<GameType, GameStatus | null>>({
     burger_catch: null,
     coffee_shooter: null,
     grand_wheel: null,
   })
+
+  const GAME_INFO: Record<GameType, { name: string; icon: any; description: string; color: string; emoji: string }> = {
+    burger_catch: {
+      name: t('burgerCatchName'),
+      icon: Hamburger,
+      description: t('burgerCatchDesc'),
+      color: 'from-amber-500 to-orange-500',
+      emoji: '🍔',
+    },
+    coffee_shooter: {
+      name: t('coffeeShooterName'),
+      icon: Coffee,
+      description: t('coffeeShooterDesc'),
+      color: 'from-amber-700 to-yellow-600',
+      emoji: '☕',
+    },
+    grand_wheel: {
+      name: t('grandWheelName'),
+      icon: CircleDot,
+      description: t('grandWheelDesc'),
+      color: 'from-purple-500 to-pink-500',
+      emoji: '🎡',
+    },
+  }
 
   const fetchGameStatuses = async () => {
     const results: Record<string, GameStatus> = {}
@@ -100,15 +102,15 @@ export function GamesHub({ onRefresh }: GamesHubProps) {
       updateUser({ points: newBalance })
       toast.success(
         winnings > 0
-          ? `You won ${winnings} points! 🎉`
-          : 'Better luck next time!',
-        { description: `New balance: ${newBalance} points` }
+          ? t('youWonPoints', { points: winnings })
+          : t('betterLuckNextTime'),
+        { description: t('newBalance', { points: newBalance }) }
       )
       onRefresh()
       fetchGameStatuses()
       setActiveGame(null)
     } catch (error: any) {
-      toast.error(error.message || 'Game error')
+      toast.error(error.message || t('gameError'))
       setActiveGame(null)
     }
   }
@@ -116,11 +118,11 @@ export function GamesHub({ onRefresh }: GamesHubProps) {
   const handleStartGame = (gameType: GameType) => {
     const status = gameStatuses[gameType]
     if (!status?.canPlay) {
-      toast.error('Game is on cooldown!')
+      toast.error(t('gameOnCooldown'))
       return
     }
     if ((user?.points || 0) < (status?.entryCost || 0)) {
-      toast.error('Not enough points!')
+      toast.error(t('notEnoughPoints'))
       return
     }
     setActiveGame(gameType)
@@ -134,11 +136,11 @@ export function GamesHub({ onRefresh }: GamesHubProps) {
       <div className="space-y-4">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => setActiveGame(null)} className="text-muted-foreground hover:text-white">
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-5 h-5 rtl-flip" />
           </Button>
           <div>
             <h2 className="text-lg font-bold">{gameInfo.emoji} {gameInfo.name}</h2>
-            <p className="text-xs text-muted-foreground">Entry cost: {status?.entryCost} points</p>
+            <p className="text-xs text-muted-foreground">{t('entryCost', { cost: status?.entryCost || 0 })}</p>
           </div>
         </div>
 
@@ -169,9 +171,9 @@ export function GamesHub({ onRefresh }: GamesHubProps) {
       <div>
         <h2 className="text-xl font-bold flex items-center gap-2">
           <Gamepad2 className="w-5 h-5 text-purple-400" />
-          Arcade Games
+          {t('arcadeGames')}
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">Spend points to play & win big!</p>
+        <p className="text-sm text-muted-foreground mt-1">{t('spendPointsToPlay')}</p>
       </div>
 
       <div className="space-y-4">
@@ -203,7 +205,7 @@ export function GamesHub({ onRefresh }: GamesHubProps) {
                       )}
                       {status?.canPlay && (
                         <Badge variant="outline" className="text-[10px] border-green-500/30 text-green-400">
-                          Available
+                          {t('available')}
                         </Badge>
                       )}
                     </div>
@@ -214,7 +216,7 @@ export function GamesHub({ onRefresh }: GamesHubProps) {
                     className="glass-button shrink-0"
                     size="sm"
                   >
-                    Play
+                    {t('play')}
                   </Button>
                 </div>
               </CardContent>

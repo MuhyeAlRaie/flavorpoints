@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth-store'
+import { useT } from '@/lib/i18n'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { CalendarCheck, Coins, Flame, Check, Sparkles, Loader2 } from 'lucide-react'
@@ -14,6 +15,7 @@ interface DailySignInProps {
 
 export function DailySignIn({ onRefresh }: DailySignInProps) {
   const { updateUser } = useAuthStore()
+  const { t, locale } = useT()
   const [status, setStatus] = useState<{
     claimedToday: boolean
     streak: number
@@ -63,14 +65,14 @@ export function DailySignIn({ onRefresh }: DailySignInProps) {
       })
       onRefresh()
 
-      toast.success(`+${data.points_awarded || 5} points!`, {
-        description: data.streak > 1 ? `${data.streak}-day streak! Keep it up! 🔥` : 'Daily sign-in claimed!',
+      const streak = data.streak || 1
+      toast.success(t('dailyPointsAwarded', { points: data.points_awarded || 5 }), {
+        description: streak > 1 ? t('streakMessage', { streak }) : t('dailySignInClaimed'),
       })
 
-      // Hide animation after 2 seconds
       setTimeout(() => setShowAnimation(false), 2000)
     } catch (error: any) {
-      toast.error(error.message || 'Failed to claim daily sign-in')
+      toast.error(error.message || t('alreadyClaimed'))
     } finally {
       setClaiming(false)
     }
@@ -78,18 +80,17 @@ export function DailySignIn({ onRefresh }: DailySignInProps) {
 
   // Generate the 7-day week dots
   const renderWeekDots = () => {
-    const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+    const isAr = locale === 'ar'
+    const days = isAr ? ['إ', 'ث', 'أ', 'ر', 'خ', 'ج', 'س'] : ['M', 'T', 'W', 'T', 'F', 'S', 'S']
     const today = new Date()
-    const dayOfWeek = today.getDay() // 0=Sun, 1=Mon...
-    const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1 // Convert to Mon=0
+    const dayOfWeek = today.getDay()
+    const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1
 
     return (
       <div className="flex items-center justify-between gap-1">
         {days.map((day, i) => {
           const isPastOrToday = i <= adjustedDay
           const isToday = i === adjustedDay
-          const isClaimed = status?.claimedToday ? i <= adjustedDay : i < adjustedDay
-          // Simple visual: show filled for days before today, today depends on claimedToday
           const filled = status ? (isToday ? status.claimedToday : isPastOrToday) : false
 
           return (
@@ -148,8 +149,8 @@ export function DailySignIn({ onRefresh }: DailySignInProps) {
               <CalendarCheck className="w-5 h-5 text-emerald-400" />
             </div>
             <div>
-              <h3 className="text-sm font-bold">Daily Sign-In</h3>
-              <p className="text-xs text-muted-foreground">Claim your daily reward</p>
+              <h3 className="text-sm font-bold">{t('dailySignIn')}</h3>
+              <p className="text-xs text-muted-foreground">{t('claimDailyReward')}</p>
             </div>
           </div>
 
@@ -157,7 +158,7 @@ export function DailySignIn({ onRefresh }: DailySignInProps) {
           {(status?.streak || 0) > 1 && (
             <div className="flex items-center gap-1 bg-gradient-to-r from-orange-500/20 to-amber-500/20 px-2.5 py-1 rounded-full">
               <Flame className="w-3.5 h-3.5 text-orange-400" />
-              <span className="text-xs font-bold text-orange-400">{status?.streak} day streak</span>
+              <span className="text-xs font-bold text-orange-400">{t('dayStreak', { count: status?.streak })}</span>
             </div>
           )}
         </div>
@@ -167,7 +168,7 @@ export function DailySignIn({ onRefresh }: DailySignInProps) {
           <div className="flex items-center gap-1.5 bg-gradient-to-r from-yellow-500/20 to-amber-500/20 px-4 py-2 rounded-full">
             <Coins className="w-5 h-5 text-yellow-400" />
             <span className="text-lg font-bold text-yellow-400">+{status?.pointsAwarded || 5}</span>
-            <span className="text-xs text-muted-foreground">pts/day</span>
+            <span className="text-xs text-muted-foreground">{t('ptsPerDay')}</span>
           </div>
         </div>
 
@@ -192,7 +193,7 @@ export function DailySignIn({ onRefresh }: DailySignInProps) {
           ) : (
             <Sparkles className="w-5 h-5 mr-2" />
           )}
-          {claiming ? 'Claiming...' : status?.claimedToday || justClaimed ? 'Claimed Today!' : 'Claim 5 Points'}
+          {claiming ? t('claiming') : (status?.claimedToday || justClaimed) ? t('claimedToday') : t('claimPoints', { points: status?.pointsAwarded || 5 })}
         </Button>
       </CardContent>
     </Card>

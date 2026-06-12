@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useT } from '@/lib/i18n'
 import { api } from '@/lib/api'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { UtensilsCrossed, Coffee, Salad, Beef, Cake, Flame } from 'lucide-react'
 
 interface MenuItem {
@@ -36,6 +36,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 }
 
 export function MenuView() {
+  const { t } = useT()
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [activeCategory, setActiveCategory] = useState('All')
@@ -57,7 +58,7 @@ export function MenuView() {
       <div className="space-y-4">
         <h2 className="text-xl font-bold flex items-center gap-2">
           <UtensilsCrossed className="w-5 h-5 text-amber-400" />
-          Our Menu
+          {t('ourMenu')}
         </h2>
         <div className="grid grid-cols-2 gap-4">
           {[1, 2, 3, 4].map(i => (
@@ -77,9 +78,9 @@ export function MenuView() {
       <div>
         <h2 className="text-xl font-bold flex items-center gap-2">
           <UtensilsCrossed className="w-5 h-5 text-amber-400" />
-          Our Menu
+          {t('ourMenu')}
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">Browse our delicious offerings</p>
+        <p className="text-sm text-muted-foreground mt-1">{t('browseOfferings')}</p>
       </div>
 
       {/* Category Filter */}
@@ -142,7 +143,7 @@ export function MenuView() {
       {filteredItems.length === 0 && (
         <div className="glass-card p-8 text-center">
           <UtensilsCrossed className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-          <p className="text-sm text-muted-foreground">No items in this category</p>
+          <p className="text-sm text-muted-foreground">{t('noItemsInCategory')}</p>
         </div>
       )}
     </div>

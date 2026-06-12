@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuthStore } from '@/store/auth-store'
 import { useAppStore, type EmployeeView } from '@/store/app-store'
 import { api } from '@/lib/api'
+import { useT } from '@/lib/i18n'
+import { LanguageSwitcher } from '@/components/ui/language-switcher'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,13 +19,8 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-const employeeNavItems: { key: EmployeeView; label: string; icon: any }[] = [
-  { key: 'search', label: 'Search', icon: Search },
-  { key: 'visit', label: 'Add Visit', icon: ShoppingBag },
-  { key: 'redeem', label: 'Redeem', icon: Gift },
-]
-
 export function EmployeeDashboard() {
+  const { t } = useT()
   const { logout } = useAuthStore()
   const { employeeView, setEmployeeView } = useAppStore()
   const [searchPhone, setSearchPhone] = useState('')
@@ -36,13 +33,19 @@ export function EmployeeDashboard() {
   const [isRedeeming, setIsRedeeming] = useState(false)
   const [redeemingRewardId, setRedeemingRewardId] = useState<string | null>(null)
 
+  const employeeNavItems: { key: EmployeeView; label: string; icon: any }[] = [
+    { key: 'search', label: t('findCustomer'), icon: Search },
+    { key: 'visit', label: t('addVisit'), icon: ShoppingBag },
+    { key: 'redeem', label: t('redeem'), icon: Gift },
+  ]
+
   useEffect(() => {
     api.getRewards().then(data => setRewards(data.rewards)).catch(console.error)
   }, [])
 
   const handleSearch = async () => {
     if (!searchPhone.trim()) {
-      toast.error('Enter a phone number')
+      toast.error(t('enterPhone'))
       return
     }
     setIsSearching(true)
@@ -50,11 +53,11 @@ export function EmployeeDashboard() {
       const data = await api.searchCustomer(searchPhone.trim())
       setFoundCustomer(data.customer)
       setSelectedCustomer(data.customer)
-      toast.success(`Found: ${data.customer.name}`)
+      toast.success(t('found', { name: data.customer.name }))
     } catch (error: any) {
       setFoundCustomer(null)
       setSelectedCustomer(null)
-      toast.error(error.message || 'Customer not found')
+      toast.error(error.message || t('customerNotFound'))
     } finally {
       setIsSearching(false)
     }
@@ -62,11 +65,11 @@ export function EmployeeDashboard() {
 
   const handleAddVisit = async () => {
     if (!selectedCustomer) {
-      toast.error('Search for a customer first')
+      toast.error(t('searchCustomerFirst'))
       return
     }
     if (!invoiceAmount || parseFloat(invoiceAmount) <= 0) {
-      toast.error('Enter a valid invoice amount')
+      toast.error(t('enterValidAmount'))
       return
     }
 
@@ -75,8 +78,8 @@ export function EmployeeDashboard() {
       const result = await api.createVisit(selectedCustomer.id, parseFloat(invoiceAmount))
       const ptsEarned = result.points_earned ?? result.pointsEarned ?? 0
       const newBal = result.new_points_balance ?? result.newPointsBalance ?? 0
-      toast.success(`Visit added! +${ptsEarned} points`, {
-        description: `New balance: ${newBal} points`
+      toast.success(t('visitAdded', { points: ptsEarned }), {
+        description: t('pointsRemaining', { points: newBal })
       })
       setInvoiceAmount('')
       // Refresh customer data
@@ -84,7 +87,7 @@ export function EmployeeDashboard() {
       setFoundCustomer(data.customer)
       setSelectedCustomer(data.customer)
     } catch (error: any) {
-      toast.error(error.message || 'Failed to add visit')
+      toast.error(error.message || t('failedToAddVisit'))
     } finally {
       setIsAddingVisit(false)
     }
@@ -92,7 +95,7 @@ export function EmployeeDashboard() {
 
   const handleRedeemReward = async (rewardId: string) => {
     if (!selectedCustomer) {
-      toast.error('Search for a customer first')
+      toast.error(t('searchCustomerFirst'))
       return
     }
 
@@ -101,15 +104,15 @@ export function EmployeeDashboard() {
     try {
       const result = await api.redeemReward(rewardId, selectedCustomer.id)
       const newBal = result.new_points_balance ?? result.newPointsBalance ?? 0
-      toast.success(`Redeemed for ${selectedCustomer.name}!`, {
-        description: `${newBal} points remaining`
+      toast.success(t('redeemedFor', { name: selectedCustomer.name }), {
+        description: t('pointsRemaining', { points: newBal })
       })
       // Refresh customer data
       const data = await api.searchCustomer(selectedCustomer.phone)
       setFoundCustomer(data.customer)
       setSelectedCustomer(data.customer)
     } catch (error: any) {
-      toast.error(error.message || 'Failed to redeem')
+      toast.error(error.message || t('failedToRedeem'))
     } finally {
       setIsRedeeming(false)
       setRedeemingRewardId(null)
@@ -132,7 +135,7 @@ export function EmployeeDashboard() {
           </div>
           <Badge variant="outline" className="border-green-500/30 text-green-400 shrink-0">
             <CheckCircle className="w-3 h-3 mr-1" />
-            Active
+            {t('activeStatus')}
           </Badge>
         </div>
       </div>
@@ -143,21 +146,21 @@ export function EmployeeDashboard() {
               <Coins className="w-3.5 h-3.5 text-yellow-400" />
               <span className="text-lg font-bold text-yellow-400">{customer.points}</span>
             </div>
-            <p className="text-[10px] text-muted-foreground">Points</p>
+            <p className="text-[10px] text-muted-foreground">{t('pointsLabel')}</p>
           </div>
           <div className="text-center">
             <div className="flex items-center justify-center gap-1 mb-1">
               <Star className="w-3.5 h-3.5 text-purple-400" />
               <span className="text-lg font-bold">{customer.total_visits ?? customer.totalVisits ?? 0}</span>
             </div>
-            <p className="text-[10px] text-muted-foreground">Visits</p>
+            <p className="text-[10px] text-muted-foreground">{t('visitsLabel')}</p>
           </div>
           <div className="text-center">
             <div className="flex items-center justify-center gap-1 mb-1">
               <Award className="w-3.5 h-3.5 text-pink-400" />
               <span className="text-lg font-bold">{customer.missions?.filter((m: any) => m.completed).length || 0}</span>
             </div>
-            <p className="text-[10px] text-muted-foreground">Missions</p>
+            <p className="text-[10px] text-muted-foreground">{t('missionsLabel')}</p>
           </div>
         </div>
       </CardContent>
@@ -168,14 +171,14 @@ export function EmployeeDashboard() {
     <div className="space-y-6">
       <h2 className="text-xl font-bold flex items-center gap-2">
         <Search className="w-5 h-5 text-purple-400" />
-        Find Customer
+        {t('findCustomer')}
       </h2>
 
       <div className="flex gap-3">
         <div className="flex-1 relative">
           <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Enter phone number"
+            placeholder={t('enterPhoneSearch')}
             value={searchPhone}
             onChange={e => setSearchPhone(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSearch()}
@@ -202,14 +205,14 @@ export function EmployeeDashboard() {
               className="glass-button-success h-14 flex flex-col gap-1"
             >
               <ShoppingBag className="w-5 h-5" />
-              <span className="text-xs">Add Visit</span>
+              <span className="text-xs">{t('addVisit')}</span>
             </Button>
             <Button
               onClick={() => setEmployeeView('redeem')}
               className="glass-button h-14 flex flex-col gap-1"
             >
               <Gift className="w-5 h-5" />
-              <span className="text-xs">Redeem Reward</span>
+              <span className="text-xs">{t('redeemReward')}</span>
             </Button>
           </div>
         </div>
@@ -221,7 +224,7 @@ export function EmployeeDashboard() {
     <div className="space-y-6">
       <h2 className="text-xl font-bold flex items-center gap-2">
         <ShoppingBag className="w-5 h-5 text-emerald-400" />
-        Add Visit
+        {t('addVisit')}
       </h2>
 
       {selectedCustomer ? (
@@ -231,7 +234,7 @@ export function EmployeeDashboard() {
           <Card className="glass-card border-0">
             <CardContent className="p-4 space-y-4">
               <div className="space-y-2">
-                <Label className="text-muted-foreground text-sm">Invoice Amount ($)</Label>
+                <Label className="text-muted-foreground text-sm">{t('invoiceAmount')}</Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                   <Input
@@ -247,7 +250,7 @@ export function EmployeeDashboard() {
 
               {invoiceAmount && parseFloat(invoiceAmount) > 0 && (
                 <div className="glass-card p-3 text-center">
-                  <p className="text-xs text-muted-foreground">Points to be earned</p>
+                  <p className="text-xs text-muted-foreground">{t('pointsToBeEarned')}</p>
                   <p className="text-3xl font-bold text-green-400">
                     +{Math.floor(parseFloat(invoiceAmount) * 1)}
                   </p>
@@ -262,12 +265,12 @@ export function EmployeeDashboard() {
                 {isAddingVisit ? (
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Processing...
+                    {t('processing')}
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4" />
-                    Add Visit & Award Points
+                    {t('addVisitAwardPoints')}
                   </div>
                 )}
               </Button>
@@ -277,10 +280,10 @@ export function EmployeeDashboard() {
       ) : (
         <div className="glass-card p-8 text-center">
           <UserCheck className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-          <p className="text-sm text-muted-foreground">Search for a customer first</p>
+          <p className="text-sm text-muted-foreground">{t('searchCustomerFirst')}</p>
           <Button onClick={() => setEmployeeView('search')} className="glass-button mt-4">
             <Search className="w-4 h-4 mr-2" />
-            Search Customer
+            {t('searchCustomer')}
           </Button>
         </div>
       )}
@@ -291,7 +294,7 @@ export function EmployeeDashboard() {
     <div className="space-y-6">
       <h2 className="text-xl font-bold flex items-center gap-2">
         <Gift className="w-5 h-5 text-pink-400" />
-        Redeem Reward
+        {t('redeemReward')}
       </h2>
 
       {selectedCustomer ? (
@@ -322,9 +325,9 @@ export function EmployeeDashboard() {
                         {redeemingRewardId === reward.id ? (
                           <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                         ) : canAfford ? (
-                          'Redeem'
+                          t('redeem')
                         ) : (
-                          'Locked'
+                          t('locked')
                         )}
                       </Button>
                     </CardContent>
@@ -337,10 +340,10 @@ export function EmployeeDashboard() {
       ) : (
         <div className="glass-card p-8 text-center">
           <UserCheck className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-          <p className="text-sm text-muted-foreground">Search for a customer first</p>
+          <p className="text-sm text-muted-foreground">{t('searchCustomerFirst')}</p>
           <Button onClick={() => setEmployeeView('search')} className="glass-button mt-4">
             <Search className="w-4 h-4 mr-2" />
-            Search Customer
+            {t('searchCustomer')}
           </Button>
         </div>
       )}
@@ -364,13 +367,16 @@ export function EmployeeDashboard() {
             <UserCheck className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-sm font-bold">Employee Portal</h1>
-            <p className="text-[10px] text-muted-foreground">FlavorPoints Staff</p>
+            <h1 className="text-sm font-bold">{t('employeePortal')}</h1>
+            <p className="text-[10px] text-muted-foreground">{t('staff')}</p>
           </div>
         </div>
-        <Button variant="ghost" size="icon" onClick={logout} className="h-9 w-9 text-muted-foreground hover:text-white">
-          <LogOut className="w-4 h-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <LanguageSwitcher />
+          <Button variant="ghost" size="icon" onClick={logout} className="h-9 w-9 text-muted-foreground hover:text-white">
+            <LogOut className="w-4 h-4" />
+          </Button>
+        </div>
       </header>
 
       {/* Content */}

@@ -5,6 +5,8 @@ import { useAuthStore } from '@/store/auth-store'
 import { useAppStore, type AdminView } from '@/store/app-store'
 import { api } from '@/lib/api'
 import { supabase } from '@/lib/supabase'
+import { useT } from '@/lib/i18n'
+import { LanguageSwitcher } from '@/components/ui/language-switcher'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,14 +25,6 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts'
 
-const adminNavItems: { key: AdminView; label: string; icon: any }[] = [
-  { key: 'analytics', label: 'Analytics', icon: BarChart3 },
-  { key: 'settings', label: 'Settings', icon: Settings },
-  { key: 'menu', label: 'Menu', icon: UtensilsCrossed },
-  { key: 'rewards', label: 'Rewards', icon: Gift },
-  { key: 'missions', label: 'Missions', icon: Target },
-]
-
 const CHART_COLORS = ['#8b5cf6', '#a855f7', '#c084fc', '#ec4899', '#f59e0b', '#6366f1']
 
 const GAME_INFO: Record<string, { label: string; icon: string; color: string }> = {
@@ -40,6 +34,7 @@ const GAME_INFO: Record<string, { label: string; icon: string; color: string }> 
 }
 
 export function AdminDashboard() {
+  const { t } = useT()
   const { logout } = useAuthStore()
   const { adminView, setAdminView } = useAppStore()
   const [analytics, setAnalytics] = useState<any>(null)
@@ -59,6 +54,14 @@ export function AdminDashboard() {
   const [newMission, setNewMission] = useState({ type: 'custom', title: '', target: '', points: '', forAll: true, customerId: '' })
   const [editingMission, setEditingMission] = useState<string | null>(null)
   const [editMissionData, setEditMissionData] = useState({ title: '', target: '', points: '' })
+
+  const adminNavItems: { key: AdminView; label: string; icon: any }[] = [
+    { key: 'analytics', label: t('analytics'), icon: BarChart3 },
+    { key: 'settings', label: t('settings'), icon: Settings },
+    { key: 'menu', label: t('menuManagement'), icon: UtensilsCrossed },
+    { key: 'rewards', label: t('rewardManagement'), icon: Gift },
+    { key: 'missions', label: t('missionManagement'), icon: Target },
+  ]
 
   const fetchData = useCallback(async () => {
     try {
@@ -103,9 +106,9 @@ export function AdminDashboard() {
     setIsSaving(true)
     try {
       await api.updateSettings(settings)
-      toast.success('Settings saved!')
+      toast.success(t('settingsSaved'))
     } catch (error: any) {
-      toast.error(error.message || 'Failed to save settings')
+      toast.error(error.message || t('failedToSaveSettings'))
     } finally {
       setIsSaving(false)
     }
@@ -113,7 +116,7 @@ export function AdminDashboard() {
 
   const handleCreateMenuItem = async () => {
     if (!newMenuItem.name || !newMenuItem.price) {
-      toast.error('Name and price are required')
+      toast.error(t('nameAndPriceRequired'))
       return
     }
     try {
@@ -124,26 +127,26 @@ export function AdminDashboard() {
         category: newMenuItem.category,
       })
       setNewMenuItem({ name: '', description: '', price: '', category: 'Main' })
-      toast.success('Menu item created!')
+      toast.success(t('menuItemCreated'))
       fetchData()
     } catch (error: any) {
-      toast.error(error.message || 'Failed to create menu item')
+      toast.error(error.message || t('failedToCreateMenuItem'))
     }
   }
 
   const handleDeleteMenuItem = async (id: string) => {
     try {
       await api.deleteMenuItem(id)
-      toast.success('Menu item deleted!')
+      toast.success(t('menuItemDeleted'))
       fetchData()
     } catch (error: any) {
-      toast.error(error.message || 'Failed to delete')
+      toast.error(error.message || t('failedToDelete'))
     }
   }
 
   const handleCreateReward = async () => {
     if (!newReward.name || !newReward.pointsCost) {
-      toast.error('Name and points cost are required')
+      toast.error(t('nameAndPointsCostRequired'))
       return
     }
     try {
@@ -153,26 +156,26 @@ export function AdminDashboard() {
         pointsCost: parseInt(newReward.pointsCost),
       })
       setNewReward({ name: '', description: '', pointsCost: '' })
-      toast.success('Reward created!')
+      toast.success(t('rewardCreated'))
       fetchData()
     } catch (error: any) {
-      toast.error(error.message || 'Failed to create reward')
+      toast.error(error.message || t('failedToCreateReward'))
     }
   }
 
   const handleDeleteReward = async (id: string) => {
     try {
       await api.deleteReward(id)
-      toast.success('Reward deleted!')
+      toast.success(t('rewardDeleted'))
       fetchData()
     } catch (error: any) {
-      toast.error(error.message || 'Failed to delete')
+      toast.error(error.message || t('failedToDelete'))
     }
   }
 
   const handleCreateMission = async () => {
     if (!newMission.title || !newMission.target || !newMission.points) {
-      toast.error('Title, target, and points are required')
+      toast.error(t('titleTargetPointsRequired'))
       return
     }
     try {
@@ -185,29 +188,29 @@ export function AdminDashboard() {
 
       if (newMission.forAll) {
         const result = await api.createMissionForAllCustomers(missionData)
-        toast.success(`Mission created for ${result.count} customers!`)
+        toast.success(t('missionCreatedFor', { count: result.count }))
       } else {
         if (!newMission.customerId) {
-          toast.error('Select a customer')
+          toast.error(t('selectACustomer'))
           return
         }
         await api.createMissionForCustomer(newMission.customerId, missionData)
-        toast.success('Mission created!')
+        toast.success(t('missionCreated'))
       }
       setNewMission({ type: 'custom', title: '', target: '', points: '', forAll: true, customerId: '' })
       fetchMissions()
     } catch (error: any) {
-      toast.error(error.message || 'Failed to create mission')
+      toast.error(error.message || t('failedToCreateMission'))
     }
   }
 
   const handleDeleteMission = async (id: string) => {
     try {
       await api.deleteMission(id)
-      toast.success('Mission deleted!')
+      toast.success(t('missionDeleted'))
       fetchMissions()
     } catch (error: any) {
-      toast.error(error.message || 'Failed to delete mission')
+      toast.error(error.message || t('failedToDeleteMission'))
     }
   }
 
@@ -218,11 +221,11 @@ export function AdminDashboard() {
         target: editMissionData.target ? parseInt(editMissionData.target) : undefined,
         points: editMissionData.points ? parseInt(editMissionData.points) : undefined,
       })
-      toast.success('Mission updated!')
+      toast.success(t('missionUpdated'))
       setEditingMission(null)
       fetchMissions()
     } catch (error: any) {
-      toast.error(error.message || 'Failed to update mission')
+      toast.error(error.message || t('failedToUpdateMission'))
     }
   }
 
@@ -262,15 +265,15 @@ export function AdminDashboard() {
       <div className="space-y-6">
         <h2 className="text-xl font-bold flex items-center gap-2">
           <BarChart3 className="w-5 h-5 text-purple-400" />
-          Analytics
+          {t('analytics')}
         </h2>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'Total Users', value: analytics.totalUsers, icon: Users, color: 'from-purple-500/20 to-indigo-500/20', textColor: 'text-purple-400' },
-            { label: 'Points in Circulation', value: analytics.pointsInCirculation?.toLocaleString(), icon: Coins, color: 'from-yellow-500/20 to-amber-500/20', textColor: 'text-yellow-400' },
-            { label: 'Total Visits', value: analytics.totalVisits, icon: ShoppingBag, color: 'from-emerald-500/20 to-teal-500/20', textColor: 'text-emerald-400' },
-            { label: 'Games Played', value: analytics.totalGamesPlayed, icon: Gamepad2, color: 'from-pink-500/20 to-rose-500/20', textColor: 'text-pink-400' },
+            { label: t('totalUsers'), value: analytics.totalUsers, icon: Users, color: 'from-purple-500/20 to-indigo-500/20', textColor: 'text-purple-400' },
+            { label: t('pointsInCirculation'), value: analytics.pointsInCirculation?.toLocaleString(), icon: Coins, color: 'from-yellow-500/20 to-amber-500/20', textColor: 'text-yellow-400' },
+            { label: t('totalVisits'), value: analytics.totalVisits, icon: ShoppingBag, color: 'from-emerald-500/20 to-teal-500/20', textColor: 'text-emerald-400' },
+            { label: t('gamesPlayed'), value: analytics.totalGamesPlayed, icon: Gamepad2, color: 'from-pink-500/20 to-rose-500/20', textColor: 'text-pink-400' },
           ].map(stat => (
             <Card key={stat.label} className="glass-card border-0">
               <CardContent className="p-4">
@@ -287,7 +290,7 @@ export function AdminDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="glass-card border-0">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Visits (Last 7 Days)</CardTitle>
+              <CardTitle className="text-sm">{t('visitsLast7Days')}</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={200}>
@@ -307,7 +310,7 @@ export function AdminDashboard() {
 
           <Card className="glass-card border-0">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Game Distribution</CardTitle>
+              <CardTitle className="text-sm">{t('gameDistribution')}</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={200}>
@@ -337,19 +340,19 @@ export function AdminDashboard() {
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
           <Card className="glass-card border-0">
             <CardContent className="p-4 text-center">
-              <p className="text-xs text-muted-foreground">Total Redemptions</p>
+              <p className="text-xs text-muted-foreground">{t('totalRedemptions')}</p>
               <p className="text-2xl font-bold text-pink-400">{analytics.totalRedemptions}</p>
             </CardContent>
           </Card>
           <Card className="glass-card border-0">
             <CardContent className="p-4 text-center">
-              <p className="text-xs text-muted-foreground">Points Redeemed</p>
+              <p className="text-xs text-muted-foreground">{t('pointsRedeemed')}</p>
               <p className="text-2xl font-bold text-orange-400">{analytics.totalRedemptionPoints?.toLocaleString()}</p>
             </CardContent>
           </Card>
           <Card className="glass-card border-0">
             <CardContent className="p-4 text-center">
-              <p className="text-xs text-muted-foreground">Net Game Revenue</p>
+              <p className="text-xs text-muted-foreground">{t('netGameRevenue')}</p>
               <p className="text-2xl font-bold text-emerald-400">{(analytics.totalGameCosts - analytics.totalGameWinnings)?.toLocaleString()}</p>
             </CardContent>
           </Card>
@@ -362,7 +365,7 @@ export function AdminDashboard() {
     <div className="space-y-6">
       <h2 className="text-xl font-bold flex items-center gap-2">
         <Settings className="w-5 h-5 text-purple-400" />
-        Settings
+        {t('settings')}
       </h2>
 
       {/* Points & Currency */}
@@ -370,10 +373,10 @@ export function AdminDashboard() {
         <CardContent className="p-6 space-y-6">
           <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
             <Coins className="w-4 h-4 text-yellow-400" />
-            Points System
+            {t('pointsSystem')}
           </h3>
           <div className="space-y-2">
-            <Label className="text-muted-foreground">Points per $1 Spent</Label>
+            <Label className="text-muted-foreground">{t('pointsPerDollar')}</Label>
             <Input
               type="number"
               value={settings.points_per_currency || '1'}
@@ -389,7 +392,7 @@ export function AdminDashboard() {
         <CardContent className="p-6 space-y-6">
           <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
             <Gamepad2 className="w-4 h-4 text-purple-400" />
-            Game Settings
+            {t('gameSettings')}
           </h3>
 
           {['burger_catch', 'coffee_shooter', 'grand_wheel'].map(game => {
@@ -402,7 +405,7 @@ export function AdminDashboard() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Entry Cost (pts)</Label>
+                    <Label className="text-xs text-muted-foreground">{t('entryCostPts')}</Label>
                     <Input
                       type="number"
                       value={settings[`game_cost_${game}`] || ''}
@@ -412,7 +415,7 @@ export function AdminDashboard() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Max Win (pts)</Label>
+                    <Label className="text-xs text-muted-foreground">{t('maxWinPts')}</Label>
                     <Input
                       type="number"
                       value={settings[`game_max_win_${game}`] || ''}
@@ -422,7 +425,7 @@ export function AdminDashboard() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Cooldown (days)</Label>
+                    <Label className="text-xs text-muted-foreground">{t('cooldownDays')}</Label>
                     <Input
                       type="number"
                       value={settings[`game_cooldown_${game}`] || ''}
@@ -432,7 +435,7 @@ export function AdminDashboard() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Min Win (pts)</Label>
+                    <Label className="text-xs text-muted-foreground">{t('minWinPts')}</Label>
                     <Input
                       type="number"
                       value={settings[`game_min_win_${game}`] || ''}
@@ -452,12 +455,12 @@ export function AdminDashboard() {
         {isSaving ? (
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            Saving...
+            {t('saving')}
           </div>
         ) : (
           <>
             <Save className="w-4 h-4 mr-2" />
-            Save All Settings
+            {t('saveAllSettings')}
           </>
         )}
       </Button>
@@ -468,24 +471,24 @@ export function AdminDashboard() {
     <div className="space-y-6">
       <h2 className="text-xl font-bold flex items-center gap-2">
         <UtensilsCrossed className="w-5 h-5 text-purple-400" />
-        Menu Management
+        {t('menuManagement')}
       </h2>
 
       <Card className="glass-card border-0">
         <CardContent className="p-4 space-y-3">
           <h3 className="text-sm font-semibold flex items-center gap-2">
             <Plus className="w-4 h-4 text-green-400" />
-            Add Menu Item
+            {t('addMenuItem')}
           </h3>
           <div className="grid grid-cols-2 gap-3">
             <Input
-              placeholder="Name"
+              placeholder={t('name')}
               value={newMenuItem.name}
               onChange={e => setNewMenuItem(prev => ({ ...prev, name: e.target.value }))}
               className="glass-input h-10"
             />
             <Input
-              placeholder="Price"
+              placeholder={t('price')}
               type="number"
               value={newMenuItem.price}
               onChange={e => setNewMenuItem(prev => ({ ...prev, price: e.target.value }))}
@@ -493,7 +496,7 @@ export function AdminDashboard() {
             />
           </div>
           <Input
-            placeholder="Description"
+            placeholder={t('description')}
             value={newMenuItem.description}
             onChange={e => setNewMenuItem(prev => ({ ...prev, description: e.target.value }))}
             className="glass-input h-10"
@@ -550,24 +553,24 @@ export function AdminDashboard() {
     <div className="space-y-6">
       <h2 className="text-xl font-bold flex items-center gap-2">
         <Gift className="w-5 h-5 text-pink-400" />
-        Reward Management
+        {t('rewardManagement')}
       </h2>
 
       <Card className="glass-card border-0">
         <CardContent className="p-4 space-y-3">
           <h3 className="text-sm font-semibold flex items-center gap-2">
             <Plus className="w-4 h-4 text-green-400" />
-            Add Reward
+            {t('addReward')}
           </h3>
           <div className="grid grid-cols-2 gap-3">
             <Input
-              placeholder="Name"
+              placeholder={t('name')}
               value={newReward.name}
               onChange={e => setNewReward(prev => ({ ...prev, name: e.target.value }))}
               className="glass-input h-10"
             />
             <Input
-              placeholder="Points Cost"
+              placeholder={t('pointsCost')}
               type="number"
               value={newReward.pointsCost}
               onChange={e => setNewReward(prev => ({ ...prev, pointsCost: e.target.value }))}
@@ -575,14 +578,14 @@ export function AdminDashboard() {
             />
           </div>
           <Input
-            placeholder="Description"
+            placeholder={t('description')}
             value={newReward.description}
             onChange={e => setNewReward(prev => ({ ...prev, description: e.target.value }))}
             className="glass-input h-10"
           />
           <Button onClick={handleCreateReward} className="glass-button-success h-10 w-full">
             <Plus className="w-4 h-4 mr-2" />
-            Add Reward
+            {t('addReward')}
           </Button>
         </CardContent>
       </Card>
@@ -620,7 +623,7 @@ export function AdminDashboard() {
     <div className="space-y-6">
       <h2 className="text-xl font-bold flex items-center gap-2">
         <Target className="w-5 h-5 text-orange-400" />
-        Mission Management
+        {t('missionManagement')}
       </h2>
 
       {/* Create Mission */}
@@ -628,7 +631,7 @@ export function AdminDashboard() {
         <CardContent className="p-4 space-y-3">
           <h3 className="text-sm font-semibold flex items-center gap-2">
             <Plus className="w-4 h-4 text-green-400" />
-            Create Mission
+            {t('createMission')}
           </h3>
 
           <div className="flex gap-2">
@@ -639,7 +642,7 @@ export function AdminDashboard() {
               onClick={() => setNewMission(prev => ({ ...prev, forAll: true }))}
             >
               <UsersRound className="w-3.5 h-3.5 mr-1" />
-              All Customers
+              {t('allCustomers')}
             </Button>
             <Button
               size="sm"
@@ -648,7 +651,7 @@ export function AdminDashboard() {
               onClick={() => setNewMission(prev => ({ ...prev, forAll: false }))}
             >
               <Users className="w-3.5 h-3.5 mr-1" />
-              One Customer
+              {t('oneCustomer')}
             </Button>
           </div>
 
@@ -658,7 +661,7 @@ export function AdminDashboard() {
               onChange={e => setNewMission(prev => ({ ...prev, customerId: e.target.value }))}
               className="glass-input h-10 px-3 w-full"
             >
-              <option value="" className="bg-gray-900">Select customer...</option>
+              <option value="" className="bg-gray-900">{t('selectCustomer')}</option>
               {allCustomers.map(c => (
                 <option key={c.id} value={c.id} className="bg-gray-900">{c.name} ({c.phone})</option>
               ))}
@@ -666,7 +669,7 @@ export function AdminDashboard() {
           )}
 
           <Input
-            placeholder="Mission Title (e.g., Visit 5 Times)"
+            placeholder={t('missionTitle')}
             value={newMission.title}
             onChange={e => setNewMission(prev => ({ ...prev, title: e.target.value }))}
             className="glass-input h-10"
@@ -674,20 +677,20 @@ export function AdminDashboard() {
 
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Type</Label>
+              <Label className="text-xs text-muted-foreground">{t('type')}</Label>
               <select
                 value={newMission.type}
                 onChange={e => setNewMission(prev => ({ ...prev, type: e.target.value }))}
                 className="glass-input h-10 px-3 w-full"
               >
-                <option value="custom" className="bg-gray-900">Custom</option>
+                <option value="custom" className="bg-gray-900">{t('custom')}</option>
                 <option value="visit_5" className="bg-gray-900">Visit 5</option>
                 <option value="visit_10" className="bg-gray-900">Visit 10</option>
                 <option value="spend_200" className="bg-gray-900">Spend $200</option>
               </select>
             </div>
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Target</Label>
+              <Label className="text-xs text-muted-foreground">{t('target')}</Label>
               <Input
                 type="number"
                 placeholder="5"
@@ -697,7 +700,7 @@ export function AdminDashboard() {
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Points Reward</Label>
+              <Label className="text-xs text-muted-foreground">{t('pointsReward')}</Label>
               <Input
                 type="number"
                 placeholder="200"
@@ -710,7 +713,7 @@ export function AdminDashboard() {
 
           <Button onClick={handleCreateMission} className="glass-button-success h-10 w-full">
             <Plus className="w-4 h-4 mr-2" />
-            {newMission.forAll ? 'Create for All Customers' : 'Create Mission'}
+            {newMission.forAll ? t('createForAllCustomers') : t('createMission')}
           </Button>
         </CardContent>
       </Card>
@@ -721,8 +724,8 @@ export function AdminDashboard() {
           {allMissions.length === 0 ? (
             <div className="glass-card p-8 text-center">
               <Target className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">No missions yet</p>
-              <p className="text-xs text-muted-foreground mt-1">Create one above to get started</p>
+              <p className="text-sm text-muted-foreground">{t('noMissionsYet')}</p>
+              <p className="text-xs text-muted-foreground mt-1">{t('createOneAbove')}</p>
             </div>
           ) : (
             allMissions.map(mission => (
@@ -734,7 +737,7 @@ export function AdminDashboard() {
                         value={editMissionData.title}
                         onChange={e => setEditMissionData(prev => ({ ...prev, title: e.target.value }))}
                         className="glass-input h-9"
-                        placeholder="Mission title"
+                        placeholder={t('missionTitle')}
                       />
                       <div className="grid grid-cols-2 gap-2">
                         <Input
@@ -742,19 +745,19 @@ export function AdminDashboard() {
                           value={editMissionData.target}
                           onChange={e => setEditMissionData(prev => ({ ...prev, target: e.target.value }))}
                           className="glass-input h-9"
-                          placeholder="Target"
+                          placeholder={t('target')}
                         />
                         <Input
                           type="number"
                           value={editMissionData.points}
                           onChange={e => setEditMissionData(prev => ({ ...prev, points: e.target.value }))}
                           className="glass-input h-9"
-                          placeholder="Points"
+                          placeholder={t('pointsReward')}
                         />
                       </div>
                       <div className="flex gap-2">
                         <Button size="sm" onClick={() => handleEditMission(mission.id)} className="glass-button-success flex-1 h-8">
-                          <Save className="w-3 h-3 mr-1" /> Save
+                          <Save className="w-3 h-3 mr-1" /> {t('save')}
                         </Button>
                         <Button size="sm" variant="ghost" onClick={() => setEditingMission(null)} className="h-8">
                           <X className="w-3 h-3" />
@@ -771,7 +774,7 @@ export function AdminDashboard() {
                               ? 'border-green-500/30 text-green-400'
                               : 'border-amber-500/30 text-amber-400'
                           }`}>
-                            {mission.completed ? '✓ Done' : `${mission.progress}/${mission.target}`}
+                            {mission.completed ? `✓ ${t('done')}` : `${mission.progress}/${mission.target}`}
                           </Badge>
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
@@ -780,7 +783,7 @@ export function AdminDashboard() {
                         <div className="flex items-center gap-1 mt-1">
                           <Zap className="w-3 h-3 text-yellow-400" />
                           <span className="text-xs font-bold text-yellow-400">{mission.points} pts</span>
-                          <span className="text-xs text-muted-foreground ml-2">Type: {mission.type}</span>
+                          <span className="text-xs text-muted-foreground ml-2">{t('type')}: {mission.type}</span>
                         </div>
                         {!mission.completed && (
                           <Progress value={(mission.progress / mission.target) * 100} className="h-1.5 mt-2" />
@@ -841,13 +844,16 @@ export function AdminDashboard() {
             <Award className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-sm font-bold">Admin Panel</h1>
-            <p className="text-[10px] text-muted-foreground">FlavorPoints Management</p>
+            <h1 className="text-sm font-bold">{t('adminPanel')}</h1>
+            <p className="text-[10px] text-muted-foreground">{t('management')}</p>
           </div>
         </div>
-        <Button variant="ghost" size="icon" onClick={logout} className="h-9 w-9 text-muted-foreground hover:text-white">
-          <LogOut className="w-4 h-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <LanguageSwitcher />
+          <Button variant="ghost" size="icon" onClick={logout} className="h-9 w-9 text-muted-foreground hover:text-white">
+            <LogOut className="w-4 h-4" />
+          </Button>
+        </div>
       </header>
 
       {/* Content */}

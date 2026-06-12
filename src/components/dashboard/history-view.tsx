@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useT } from '@/lib/i18n'
 import { api } from '@/lib/api'
 import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Clock, ShoppingBag, Gamepad2, ArrowUpCircle, ArrowDownCircle } from 'lucide-react'
 
 export function HistoryView() {
+  const { t, locale } = useT()
   const [visits, setVisits] = useState<any[]>([])
   const [gameHistory, setGameHistory] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -24,12 +26,14 @@ export function HistoryView() {
       .finally(() => setIsLoading(false))
   }, [])
 
+  const dateFormat = locale === 'ar' ? 'ar-SA' : 'en-US'
+
   if (isLoading) {
     return (
       <div className="space-y-4">
         <h2 className="text-xl font-bold flex items-center gap-2">
           <Clock className="w-5 h-5 text-emerald-400" />
-          History
+          {t('history')}
         </h2>
         {[1, 2, 3].map(i => (
           <div key={i} className="glass-card p-4 animate-pulse">
@@ -45,7 +49,7 @@ export function HistoryView() {
     <div className="space-y-6">
       <h2 className="text-xl font-bold flex items-center gap-2">
         <Clock className="w-5 h-5 text-emerald-400" />
-        History
+        {t('history')}
       </h2>
 
       <Tabs defaultValue="visits" className="w-full">
@@ -55,14 +59,14 @@ export function HistoryView() {
             className="flex-1 rounded-lg data-[state=active]:bg-purple-500/20 data-[state=active]:text-white text-muted-foreground text-sm"
           >
             <ShoppingBag className="w-3.5 h-3.5 mr-1.5" />
-            Visits
+            {t('visits')}
           </TabsTrigger>
           <TabsTrigger
             value="games"
             className="flex-1 rounded-lg data-[state=active]:bg-purple-500/20 data-[state=active]:text-white text-muted-foreground text-sm"
           >
             <Gamepad2 className="w-3.5 h-3.5 mr-1.5" />
-            Games
+            {t('games')}
           </TabsTrigger>
         </TabsList>
 
@@ -70,7 +74,7 @@ export function HistoryView() {
           {visits.length === 0 ? (
             <div className="glass-card p-8 text-center">
               <ShoppingBag className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">No visits yet</p>
+              <p className="text-sm text-muted-foreground">{t('noVisitsYet')}</p>
             </div>
           ) : (
             visits.map(visit => (
@@ -81,9 +85,9 @@ export function HistoryView() {
                       <ShoppingBag className="w-5 h-5 text-emerald-400" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium">Visit</p>
+                      <p className="text-sm font-medium">{t('visit')}</p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(visit.createdAt).toLocaleDateString('en-US', {
+                        {new Date(visit.createdAt).toLocaleDateString(dateFormat, {
                           month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
                         })}
                       </p>
@@ -106,7 +110,7 @@ export function HistoryView() {
           {gameHistory.length === 0 ? (
             <div className="glass-card p-8 text-center">
               <Gamepad2 className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">No games played yet</p>
+              <p className="text-sm text-muted-foreground">{t('noGamesPlayedYet')}</p>
             </div>
           ) : (
             gameHistory.map(game => (
@@ -123,7 +127,7 @@ export function HistoryView() {
                     <div>
                       <p className="text-sm font-medium capitalize">{game.gameType.replace(/_/g, ' ')}</p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(game.playedAt).toLocaleDateString('en-US', {
+                        {new Date(game.playedAt).toLocaleDateString(dateFormat, {
                           month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
                         })}
                       </p>

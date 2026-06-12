@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAuthStore } from '@/store/auth-store'
+import { useT } from '@/lib/i18n'
 import { api } from '@/lib/api'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -24,6 +25,7 @@ interface RewardsStoreProps {
 
 export function RewardsStore({ onRefresh }: RewardsStoreProps) {
   const { user, updateUser } = useAuthStore()
+  const { t } = useT()
   const [rewards, setRewards] = useState<Reward[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [redeemingId, setRedeemingId] = useState<string | null>(null)
@@ -37,7 +39,7 @@ export function RewardsStore({ onRefresh }: RewardsStoreProps) {
 
   const handleRedeem = async (reward: Reward) => {
     if ((user?.points || 0) < reward.pointsCost) {
-      toast.error('Not enough points!')
+      toast.error(t('notEnoughPoints'))
       return
     }
 
@@ -46,12 +48,12 @@ export function RewardsStore({ onRefresh }: RewardsStoreProps) {
       const result = await api.redeemReward(reward.id)
       const newBalance = result.new_points_balance ?? result.newPointsBalance ?? 0
       updateUser({ points: newBalance })
-      toast.success(`Redeemed: ${reward.name}! 🎁`, {
-        description: `${newBalance} points remaining`
+      toast.success(t('redeemed', { name: reward.name }), {
+        description: t('pointsRemaining', { points: newBalance })
       })
       onRefresh()
     } catch (error: any) {
-      toast.error(error.message || 'Redemption failed')
+      toast.error(error.message || t('redemptionFailed'))
     } finally {
       setRedeemingId(null)
     }
@@ -62,7 +64,7 @@ export function RewardsStore({ onRefresh }: RewardsStoreProps) {
       <div className="space-y-4">
         <h2 className="text-xl font-bold flex items-center gap-2">
           <Gift className="w-5 h-5 text-pink-400" />
-          Rewards Store
+          {t('rewardsStore')}
         </h2>
         <div className="grid grid-cols-2 gap-4">
           {[1, 2, 3, 4].map(i => (
@@ -83,10 +85,10 @@ export function RewardsStore({ onRefresh }: RewardsStoreProps) {
         <div>
           <h2 className="text-xl font-bold flex items-center gap-2">
             <Gift className="w-5 h-5 text-pink-400" />
-            Rewards Store
+            {t('rewardsStore')}
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
-            You have <span className="text-yellow-400 font-bold">{user?.points || 0}</span> points
+            {t('youHavePoints', { points: user?.points || 0 })}
           </p>
         </div>
       </div>
@@ -122,12 +124,12 @@ export function RewardsStore({ onRefresh }: RewardsStoreProps) {
                   ) : canAfford ? (
                     <>
                       <CheckCircle className="w-3 h-3 mr-1" />
-                      Redeem
+                      {t('redeem')}
                     </>
                   ) : (
                     <>
                       <Lock className="w-3 h-3 mr-1" />
-                      Locked
+                      {t('locked')}
                     </>
                   )}
                 </Button>

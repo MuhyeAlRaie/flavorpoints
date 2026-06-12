@@ -1,5 +1,6 @@
 'use client'
 
+import { useT } from '@/lib/i18n'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -21,6 +22,7 @@ interface MissionsViewProps {
 }
 
 export function MissionsView({ missions }: MissionsViewProps) {
+  const { t } = useT()
   const activeMissions = missions.filter(m => !m.completed)
   const completedMissions = missions.filter(m => m.completed)
 
@@ -29,9 +31,9 @@ export function MissionsView({ missions }: MissionsViewProps) {
       <div>
         <h2 className="text-xl font-bold flex items-center gap-2">
           <Target className="w-5 h-5 text-amber-400" />
-          Missions
+          {t('missionsTitle')}
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">Complete missions to earn bonus points!</p>
+        <p className="text-sm text-muted-foreground mt-1">{t('completeMissions')}</p>
       </div>
 
       {/* Active Missions */}
@@ -39,7 +41,7 @@ export function MissionsView({ missions }: MissionsViewProps) {
         <div className="space-y-3">
           <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
             <Flame className="w-3.5 h-3.5 text-orange-400" />
-            Active ({activeMissions.length})
+            {t('active')} ({activeMissions.length})
           </h3>
           {activeMissions.map(mission => (
             <Card key={mission.id} className="glass-card border-0">
@@ -51,7 +53,7 @@ export function MissionsView({ missions }: MissionsViewProps) {
                     </div>
                     <div>
                       <h4 className="font-semibold text-sm">{mission.title}</h4>
-                      <p className="text-xs text-muted-foreground">{mission.type.replace(/_/g, ' ')} mission</p>
+                      <p className="text-xs text-muted-foreground">{mission.type.replace(/_/g, ' ')} {t('mission')}</p>
                     </div>
                   </div>
                   <Badge variant="outline" className="text-[10px] border-yellow-500/30 text-yellow-400 shrink-0">
@@ -61,7 +63,7 @@ export function MissionsView({ missions }: MissionsViewProps) {
                 </div>
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Progress</span>
+                    <span className="text-muted-foreground">{t('progress')}</span>
                     <span className="text-purple-400 font-medium">{mission.progress}/{mission.target}</span>
                   </div>
                   <Progress
@@ -80,7 +82,7 @@ export function MissionsView({ missions }: MissionsViewProps) {
         <div className="space-y-3">
           <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
             <Star className="w-3.5 h-3.5 text-green-400" />
-            Completed ({completedMissions.length})
+            {t('completed')} ({completedMissions.length})
           </h3>
           {completedMissions.map(mission => (
             <Card key={mission.id} className="glass-card border-0 opacity-60">
@@ -90,7 +92,7 @@ export function MissionsView({ missions }: MissionsViewProps) {
                 </div>
                 <div className="flex-1">
                   <h4 className="font-semibold text-sm line-through">{mission.title}</h4>
-                  <p className="text-xs text-green-400">Completed!</p>
+                  <p className="text-xs text-green-400">{t('completed')}</p>
                 </div>
               </CardContent>
             </Card>
@@ -101,7 +103,7 @@ export function MissionsView({ missions }: MissionsViewProps) {
       {missions.length === 0 && (
         <div className="glass-card p-8 text-center">
           <Target className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-          <p className="text-sm text-muted-foreground">No missions available</p>
+          <p className="text-sm text-muted-foreground">{t('noMissionsAvailable')}</p>
         </div>
       )}
     </div>

@@ -269,3 +269,18 @@
   background: linear-gradient(90deg, #8b5cf6, #a855f7);
   border-radius: 2px;
 }
+
+/* RTL Support */
+[dir="rtl"] .glass-input {
+  text-align: right;
+}
+
+[dir="rtl"] .mobile-nav-item.active::after {
+  left: 50%;
+  right: auto;
+}
+
+/* RTL icon flipping for directional icons */
+[dir="rtl"] .rtl-flip {
+  transform: scaleX(-1);
+}

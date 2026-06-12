@@ -3,72 +3,78 @@
 import { useEffect, useState, useRef } from 'react'
 import { useAuthStore } from '@/store/auth-store'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import { useT } from '@/lib/i18n'
 import { api } from '@/lib/api'
 import { AuthScreen } from '@/components/auth/auth-screen'
 import { CustomerDashboard } from '@/components/dashboard/customer-dashboard'
 import { AdminDashboard } from '@/components/admin/admin-dashboard'
 import { EmployeeDashboard } from '@/components/employee/employee-dashboard'
 import { Database, ExternalLink, Key, Server } from 'lucide-react'
+import { LanguageSwitcher } from '@/components/ui/language-switcher'
 
 function SetupGuide() {
+  const { t } = useT()
+
   return (
     <div className="min-h-screen bg-gradient-main flex items-center justify-center p-4">
       <div className="w-full max-w-2xl space-y-6">
         <div className="text-center">
+          <div className="flex justify-end mb-2">
+            <LanguageSwitcher />
+          </div>
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 mb-4">
             <Database className="w-10 h-10 text-white" />
           </div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
-            FlavorPoints Setup
+            {t('setupTitle')}
           </h1>
-          <p className="text-muted-foreground mt-2">Connect your Supabase backend to get started</p>
+          <p className="text-muted-foreground mt-2">{t('setupSubtitle')}</p>
         </div>
 
         <div className="glass-card p-6 space-y-6">
           <h2 className="text-lg font-bold flex items-center gap-2">
             <Server className="w-5 h-5 text-purple-400" />
-            Step 1: Create a Supabase Project
+            {t('step1Title')}
           </h2>
           <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside">
-            <li>Go to <a href="https://supabase.com" target="_blank" rel="noopener" className="text-purple-400 underline">supabase.com</a> and create a free account</li>
-            <li>Create a new project and wait for it to provision</li>
-            <li>Go to <strong>Project Settings → API</strong></li>
-            <li>Copy your <strong>Project URL</strong> and <strong>anon/public key</strong></li>
+            <li>{t('step1_1')}</li>
+            <li>{t('step1_2')}</li>
+            <li>{t('step1_3')}</li>
+            <li>{t('step1_4')}</li>
           </ol>
 
           <h2 className="text-lg font-bold flex items-center gap-2">
             <Database className="w-5 h-5 text-purple-400" />
-            Step 2: Run the Database Schema
+            {t('step2Title')}
           </h2>
           <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside">
-            <li>In Supabase, go to <strong>SQL Editor</strong></li>
-            <li>Copy the contents of <code className="bg-white/5 px-1.5 py-0.5 rounded">supabase/schema.sql</code> and run it</li>
-            <li>Then copy and run <code className="bg-white/5 px-1.5 py-0.5 rounded">supabase/seed.sql</code> to add demo data</li>
+            <li>{t('step2_1')}</li>
+            <li>{t('step2_2')}</li>
+            <li>{t('step2_3')}</li>
           </ol>
 
           <h2 className="text-lg font-bold flex items-center gap-2">
             <Key className="w-5 h-5 text-purple-400" />
-            Step 3: Disable Email Confirmation
+            {t('step3Title')}
           </h2>
           <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside">
-            <li>Go to <strong>Authentication → Providers → Email</strong></li>
-            <li>Turn <strong>OFF</strong> &quot;Confirm email&quot;</li>
-            <li>Save the changes</li>
+            <li>{t('step3_1')}</li>
+            <li>{t('step3_2')}</li>
+            <li>{t('step3_3')}</li>
           </ol>
 
           <h2 className="text-lg font-bold flex items-center gap-2">
             <ExternalLink className="w-5 h-5 text-purple-400" />
-            Step 4: Set Environment Variables
+            {t('step4Title')}
           </h2>
           <div className="glass-card p-4 font-mono text-xs space-y-1">
             <p className="text-muted-foreground"># Create a .env.local file with:</p>
             <p><span className="text-green-400">NEXT_PUBLIC_SUPABASE_URL</span>=<span className="text-yellow-400">https://your-project.supabase.co</span></p>
             <p><span className="text-green-400">NEXT_PUBLIC_SUPABASE_ANON_KEY</span>=<span className="text-yellow-400">your-anon-key-here</span></p>
           </div>
-          <p className="text-xs text-muted-foreground">For GitHub Pages: also set <code className="bg-white/5 px-1 py-0.5 rounded">NEXT_PUBLIC_BASE_PATH</code> to your repo name (e.g., <code className="bg-white/5 px-1 py-0.5 rounded">/flavorpoints</code>)</p>
 
           <div className="pt-2 text-center">
-            <p className="text-sm text-amber-400">Restart the dev server after adding environment variables</p>
+            <p className="text-sm text-amber-400">{t('envHint')}</p>
           </div>
         </div>
       </div>
@@ -78,6 +84,7 @@ function SetupGuide() {
 
 export default function HomePage() {
   const { isAuthenticated, user, login, clearAuth } = useAuthStore()
+  const { t } = useT()
   const [isChecking, setIsChecking] = useState(true)
   const initRef = useRef(false)
 
@@ -106,7 +113,6 @@ export default function HomePage() {
               session.access_token
             )
           } else {
-            // No profile - sign out since account is incomplete
             await supabase.auth.signOut()
           }
         }
@@ -119,7 +125,6 @@ export default function HomePage() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
       if (event === 'SIGNED_OUT') {
-        // Just clear local state - don't call supabase.auth.signOut() again
         clearAuth()
       }
     })
@@ -144,7 +149,7 @@ export default function HomePage() {
             </svg>
           </div>
           <div className="w-8 h-8 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mx-auto" />
-          <p className="text-sm text-muted-foreground">Loading FlavorPoints...</p>
+          <p className="text-sm text-muted-foreground">{t('loading')}</p>
         </div>
       </div>
     )
