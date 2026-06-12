@@ -444,6 +444,82 @@ class ApiClient {
     return { mission: result }
   }
 
+  // ========== DAILY SIGN-IN ==========
+
+  async getDailySignInStatus() {
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+    if (!authUser) throw new Error('Not authenticated')
+
+    // Get today's sign-in record
+    const today = new Date().toISOString().split('T')[0]
+    const { data: todayRecord } = await supabase
+      .from('daily_sign_ins')
+      .select('*')
+      .eq('customer_id', authUser.id)
+      .eq('sign_in_date', today)
+      .single()
+
+    // Get recent sign-ins for streak calculation
+    const sevenDaysAgo = new Date()
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6)
+    const { data: recentSignIns } = await supabase
+      .from('daily_sign_ins')
+      .select('sign_in_date')
+      .eq('customer_id', authUser.id)
+      .gte('sign_in_date', sevenDaysAgo.toISOString().split('T')[0])
+      .order('sign_in_date', { ascending: false })
+
+    // Calculate streak
+    let streak = 0
+    if (recentSignIns && recentSignIns.length > 0) {
+      const sorted = [...recentSignIns].sort((a, b) => new Date(b.sign_in_date).getTime() - new Date(a.sign_in_date).getTime())
+      const checkDate = new Date()
+      // If already signed in today, start from today; otherwise from yesterday
+      if (todayRecord) {
+        streak = 1
+        checkDate.setDate(checkDate.getDate() - 1)
+      }
+      for (const record of sorted) {
+        const recordDate = new Date(record.sign_in_date)
+        const expectedDate = checkDate.toISOString().split('T')[0]
+        const recordDateStr = record.sign_in_date
+        if (recordDateStr === expectedDate && recordDateStr !== today) {
+          streak++
+          checkDate.setDate(checkDate.getDate() - 1)
+        } else if (recordDateStr !== today && recordDateStr !== expectedDate) {
+          break
+        }
+      }
+    }
+
+    // Get points amount from settings
+    const { data: pointsSetting } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'daily_sign_in_points')
+      .single()
+    const pointsAwarded = pointsSetting ? parseInt(pointsSetting.value) : 5
+
+    return {
+      claimedToday: !!todayRecord,
+      streak,
+      pointsAwarded,
+      lastSignInDate: todayRecord?.created_at || null,
+    }
+  }
+
+  async claimDailySignIn() {
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+    if (!authUser) throw new Error('Not authenticated')
+
+    const { data, error } = await supabase.rpc('claim_daily_sign_in', {
+      p_customer_id: authUser.id,
+    })
+    if (error) throw new Error(error.message)
+    if (data?.error) throw new Error(data.error)
+    return data
+  }
+
   // ========== ADMIN ==========
 
   async getAnalytics() {

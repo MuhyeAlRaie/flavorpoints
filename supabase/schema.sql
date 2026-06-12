@@ -96,6 +96,16 @@ CREATE TABLE IF NOT EXISTS public.reward_redemptions (
   redeemed_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Daily Sign-Ins
+CREATE TABLE IF NOT EXISTS public.daily_sign_ins (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id UUID NOT NULL REFERENCES public.customers(id) ON DELETE CASCADE,
+  sign_in_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  points_awarded INTEGER NOT NULL DEFAULT 5,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(customer_id, sign_in_date)
+);
+
 -- =============================================
 -- 2. INDEXES
 -- =============================================
@@ -106,6 +116,8 @@ CREATE INDEX IF NOT EXISTS idx_game_history_customer ON public.game_history(cust
 CREATE INDEX IF NOT EXISTS idx_game_history_game_type ON public.game_history(game_type);
 CREATE INDEX IF NOT EXISTS idx_missions_customer ON public.missions(customer_id);
 CREATE INDEX IF NOT EXISTS idx_reward_redemptions_customer ON public.reward_redemptions(customer_id);
+CREATE INDEX IF NOT EXISTS idx_daily_sign_ins_customer ON public.daily_sign_ins(customer_id);
+CREATE INDEX IF NOT EXISTS idx_daily_sign_ins_date ON public.daily_sign_ins(sign_in_date);
 
 -- =============================================
 -- 3. HELPER FUNCTIONS (SECURITY DEFINER - bypasses RLS to avoid recursion)
@@ -159,6 +171,7 @@ ALTER TABLE public.game_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.missions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reward_redemptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.daily_sign_ins ENABLE ROW LEVEL SECURITY;
 
 -- ---------- Customers ----------
 -- Users can read their own profile
@@ -315,6 +328,19 @@ CREATE POLICY "Admins can read all redemptions"
   USING (public.is_admin());
 
 -- Redemptions are created via RPC function (redeem_reward)
+
+-- ---------- Daily Sign-Ins ----------
+-- Users can read their own daily sign-ins
+CREATE POLICY "Users can read own daily sign-ins"
+  ON public.daily_sign_ins FOR SELECT
+  USING (customer_id = auth.uid());
+
+-- Admins can read all daily sign-ins
+CREATE POLICY "Admins can read all daily sign-ins"
+  ON public.daily_sign_ins FOR SELECT
+  USING (public.is_admin());
+
+-- Daily sign-ins are created via RPC function (claim_daily_sign_in)
 
 -- =============================================
 -- 5. POSTGRESQL FUNCTIONS (RPC)
@@ -553,6 +579,67 @@ BEGIN
 END;
 $$;
 
+-- CLAIM DAILY SIGN-IN: Award daily sign-in points
+CREATE OR REPLACE FUNCTION public.claim_daily_sign_in(
+  p_customer_id UUID
+)
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_points_awarded INT;
+  v_new_points INT;
+  v_sign_in_id UUID;
+  v_streak INT;
+  v_already_claimed BOOLEAN;
+BEGIN
+  -- Get points amount from settings (default 5)
+  SELECT (value)::INT INTO v_points_awarded
+  FROM public.app_settings WHERE key = 'daily_sign_in_points';
+  IF v_points_awarded IS NULL THEN
+    v_points_awarded := 5;
+  END IF;
+
+  -- Check if already claimed today
+  SELECT EXISTS (
+    SELECT 1 FROM public.daily_sign_ins
+    WHERE customer_id = p_customer_id AND sign_in_date = CURRENT_DATE
+  ) INTO v_already_claimed;
+
+  IF v_already_claimed THEN
+    RETURN json_build_object('error', 'Already claimed today');
+  END IF;
+
+  -- Calculate streak (consecutive days)
+  SELECT COUNT(*) INTO v_streak
+  FROM public.daily_sign_ins
+  WHERE customer_id = p_customer_id
+    AND sign_in_date >= CURRENT_DATE - INTERVAL '6 days'
+    AND sign_in_date < CURRENT_DATE;
+
+  -- Insert sign-in record
+  INSERT INTO public.daily_sign_ins (id, customer_id, sign_in_date, points_awarded)
+  VALUES (gen_random_uuid(), p_customer_id, CURRENT_DATE, v_points_awarded)
+  RETURNING id INTO v_sign_in_id;
+
+  -- Award points
+  UPDATE public.customers
+  SET points = points + v_points_awarded, updated_at = NOW()
+  WHERE id = p_customer_id;
+
+  -- Get new balance
+  SELECT points INTO v_new_points FROM public.customers WHERE id = p_customer_id;
+
+  RETURN json_build_object(
+    'sign_in_id', v_sign_in_id,
+    'points_awarded', v_points_awarded,
+    'new_points_balance', v_new_points,
+    'streak', v_streak + 1
+  );
+END;
+$$;
+
 -- =============================================
 -- 6. SEED DATA
 -- =============================================
@@ -568,7 +655,8 @@ INSERT INTO public.app_settings (key, value) VALUES
   ('game_cooldown_grand_wheel', '30'),
   ('mission_target_visit_5', '5'),
   ('mission_target_visit_10', '10'),
-  ('mission_target_spend_200', '200')
+  ('mission_target_spend_200', '200'),
+  ('daily_sign_in_points', '5')
 ON CONFLICT (key) DO NOTHING;
 
 -- Menu Items

@@ -19,6 +19,7 @@ import { RewardsStore } from './rewards-store'
 import { HistoryView } from './history-view'
 import { MissionsView } from './missions-view'
 import { MenuView } from './menu-view'
+import { DailySignIn } from './daily-sign-in'
 
 const navItems: { key: CustomerView; label: string; icon: any }[] = [
   { key: 'dashboard', label: 'Home', icon: Star },
@@ -68,6 +69,9 @@ export function CustomerDashboard() {
           <div className="space-y-6">
             {/* Welcome & Points */}
             <PointsOverview onRefresh={refreshUser} />
+
+            {/* Daily Sign-In */}
+            <DailySignIn onRefresh={refreshUser} />
 
             {/* Quick Stats Grid */}
             <div className="grid grid-cols-2 gap-4">
