@@ -369,6 +369,81 @@ class ApiClient {
     return { missions: data || [] }
   }
 
+  // ========== ADMIN MISSIONS ==========
+
+  async getAllMissions() {
+    const { data, error } = await supabase
+      .from('missions')
+      .select('*, customers(name, phone)')
+      .order('completed', { ascending: true })
+    if (error) throw new Error(error.message)
+    return { missions: data || [] }
+  }
+
+  async createMissionForCustomer(customerId: string, data: { type: string; title: string; target: number; points: number }) {
+    const { data: mission, error } = await supabase
+      .from('missions')
+      .insert({
+        customer_id: customerId,
+        type: data.type,
+        title: data.title,
+        target: data.target,
+        progress: 0,
+        points: data.points,
+        completed: false,
+      })
+      .select()
+      .single()
+    if (error) throw new Error(error.message)
+    return { mission }
+  }
+
+  async createMissionForAllCustomers(data: { type: string; title: string; target: number; points: number }) {
+    // Get all customers
+    const { data: customers, error: custError } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('role', 'customer')
+    if (custError) throw new Error(custError.message)
+
+    const missions = (customers || []).map(c => ({
+      customer_id: c.id,
+      type: data.type,
+      title: data.title,
+      target: data.target,
+      progress: 0,
+      points: data.points,
+      completed: false,
+    }))
+
+    const { error } = await supabase.from('missions').insert(missions)
+    if (error) throw new Error(error.message)
+    return { count: missions.length }
+  }
+
+  async deleteMission(missionId: string) {
+    const { error } = await supabase.from('missions').delete().eq('id', missionId)
+    if (error) throw new Error(error.message)
+    return { success: true }
+  }
+
+  async updateMission(missionId: string, data: { title?: string; target?: number; points?: number; progress?: number }) {
+    const updateData: any = {}
+    if (data.title !== undefined) updateData.title = data.title
+    if (data.target !== undefined) updateData.target = data.target
+    if (data.points !== undefined) updateData.points = data.points
+    if (data.progress !== undefined) updateData.progress = data.progress
+
+    const { data: result, error } = await supabase
+      .from('missions')
+      .update(updateData)
+      .eq('id', missionId)
+      .select()
+      .single()
+    if (error) throw new Error(error.message)
+    return { mission: result }
+  }
+
   // ========== ADMIN ==========
 
   async getAnalytics() {

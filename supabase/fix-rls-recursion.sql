@@ -139,3 +139,31 @@ CREATE POLICY "Admins can insert app settings"
 CREATE POLICY "Admins can update app settings"
   ON public.app_settings FOR UPDATE
   USING (public.is_admin());
+
+-- ========== MISSIONS (Admin can manage all) ==========
+DROP POLICY IF EXISTS "Admins can insert missions" ON public.missions;
+DROP POLICY IF EXISTS "Admins can update missions" ON public.missions;
+DROP POLICY IF EXISTS "Admins can delete missions" ON public.missions;
+
+CREATE POLICY "Admins can insert missions"
+  ON public.missions FOR INSERT
+  WITH CHECK (public.is_admin());
+
+CREATE POLICY "Admins can update missions"
+  ON public.missions FOR UPDATE
+  USING (public.is_admin());
+
+CREATE POLICY "Admins can delete missions"
+  ON public.missions FOR DELETE
+  USING (public.is_admin());
+
+-- ========== REWARD REDEMPTIONS (Employee can read all) ==========
+DROP POLICY IF EXISTS "Employees can read all redemptions" ON public.reward_redemptions;
+CREATE POLICY "Employees can read all redemptions"
+  ON public.reward_redemptions FOR SELECT
+  USING (public.is_employee());
+
+-- ========== VISITS (Employee can create) ==========
+CREATE POLICY IF NOT EXISTS "Employees can create visits"
+  ON public.visits FOR INSERT
+  WITH CHECK (public.is_admin_or_employee());

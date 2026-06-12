@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 
 export type CustomerView = 'dashboard' | 'games' | 'rewards' | 'history' | 'missions' | 'menu'
-export type AdminView = 'analytics' | 'settings' | 'menu' | 'rewards'
+export type AdminView = 'analytics' | 'settings' | 'menu' | 'rewards' | 'missions'
 export type EmployeeView = 'search' | 'visit' | 'redeem'
 export type GameType = 'burger_catch' | 'coffee_shooter' | 'grand_wheel'
 

@@ -286,6 +286,21 @@ CREATE POLICY "Employees can read all missions"
   ON public.missions FOR SELECT
   USING (public.is_employee());
 
+-- Admins can insert missions
+CREATE POLICY "Admins can insert missions"
+  ON public.missions FOR INSERT
+  WITH CHECK (public.is_admin());
+
+-- Admins can update missions
+CREATE POLICY "Admins can update missions"
+  ON public.missions FOR UPDATE
+  USING (public.is_admin());
+
+-- Admins can delete missions
+CREATE POLICY "Admins can delete missions"
+  ON public.missions FOR DELETE
+  USING (public.is_admin());
+
 -- Missions are managed via RPC functions
 
 -- ---------- Reward Redemptions ----------
