@@ -14,6 +14,27 @@ class ApiClient {
       .eq('id', data.user.id)
       .single()
 
+    // If no profile exists, auto-create one
+    if (!profile) {
+      const newProfile = {
+        id: data.user.id,
+        phone,
+        email: data.user.email || email,
+        name: data.user.user_metadata?.name || phone,
+        points: 100,
+        total_visits: 0,
+        role: phone === '000000' ? 'admin' : 'customer',
+      }
+      const { data: created, error: createError } = await supabase
+        .from('customers')
+        .insert(newProfile)
+        .select()
+        .single()
+
+      if (createError) throw new Error('Failed to create profile: ' + createError.message)
+      return { user: created, token: data.session?.access_token || '' }
+    }
+
     return { user: profile, token: data.session?.access_token || '' }
   }
 

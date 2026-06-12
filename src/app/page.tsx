@@ -105,6 +105,9 @@ export default function HomePage() {
               { ...profile, totalVisits: profile.total_visits, createdAt: profile.created_at, updatedAt: profile.updated_at },
               session.access_token
             )
+          } else {
+            // No profile - sign out since account is incomplete
+            await supabase.auth.signOut()
           }
         }
       } catch (error) {
