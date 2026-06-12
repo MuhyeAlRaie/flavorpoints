@@ -1,0 +1,242 @@
+'use client'
+
+import { useState } from 'react'
+import { api } from '@/lib/api'
+import { useAuthStore } from '@/store/auth-store'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { UtensilsCrossed, Phone, Mail, User, Lock, Sparkles } from 'lucide-react'
+import { toast } from 'sonner'
+
+export function AuthScreen() {
+  const { login } = useAuthStore()
+  const [isLoading, setIsLoading] = useState(false)
+  const [loginForm, setLoginForm] = useState({ phone: '', password: '' })
+  const [signupForm, setSignupForm] = useState({ phone: '', email: '', name: '', password: '' })
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    try {
+      const data = await api.login(loginForm.phone, loginForm.password)
+      login(
+        { ...data.user, totalVisits: data.user.total_visits || data.user.totalVisits || 0, createdAt: data.user.created_at || data.user.createdAt, updatedAt: data.user.updated_at || data.user.updatedAt },
+        data.token
+      )
+      toast.success(`Welcome back, ${data.user.name}!`)
+    } catch (error: any) {
+      toast.error(error.message || 'Login failed')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    try {
+      const data = await api.signup(
+        signupForm.phone,
+        signupForm.email,
+        signupForm.name,
+        signupForm.password
+      )
+      login(
+        { ...data.user, totalVisits: data.user.total_visits || data.user.totalVisits || 0, createdAt: data.user.created_at || data.user.createdAt, updatedAt: data.user.updated_at || data.user.updatedAt },
+        data.token
+      )
+      toast.success(`Welcome, ${data.user.name}! You received 100 bonus points!`)
+    } catch (error: any) {
+      toast.error(error.message || 'Signup failed')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-main flex items-center justify-center p-4">
+      {/* Floating background elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 w-48 h-48 bg-pink-500/10 rounded-full blur-3xl" />
+      </div>
+
+      <div className="w-full max-w-md relative z-10">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 mb-4 shadow-lg shadow-purple-500/25">
+            <UtensilsCrossed className="w-10 h-10 text-white" />
+          </div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
+            FlavorPoints
+          </h1>
+          <p className="text-muted-foreground mt-2">Earn. Play. Reward.</p>
+        </div>
+
+        {/* Auth Card */}
+        <Card className="glass-card border-0 shadow-2xl">
+          <CardContent className="p-0">
+            <Tabs defaultValue="login" className="w-full">
+              <TabsList className="w-full bg-transparent border-b border-white/5 rounded-none h-14 p-0">
+                <TabsTrigger
+                  value="login"
+                  className="flex-1 h-full rounded-none data-[state=active]:bg-purple-500/20 data-[state=active]:border-b-2 data-[state=active]:border-purple-400 data-[state=active]:shadow-none text-muted-foreground data-[state=active]:text-white"
+                >
+                  Sign In
+                </TabsTrigger>
+                <TabsTrigger
+                  value="signup"
+                  className="flex-1 h-full rounded-none data-[state=active]:bg-purple-500/20 data-[state=active]:border-b-2 data-[state=active]:border-purple-400 data-[state=active]:shadow-none text-muted-foreground data-[state=active]:text-white"
+                >
+                  Sign Up
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="login" className="p-6 mt-0">
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground text-sm">Phone Number</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="tel"
+                        placeholder="Enter your phone number"
+                        value={loginForm.phone}
+                        onChange={(e) => setLoginForm(prev => ({ ...prev, phone: e.target.value }))}
+                        className="glass-input pl-10 h-12 border-white/10"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground text-sm">Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="password"
+                        placeholder="Enter your password"
+                        value={loginForm.password}
+                        onChange={(e) => setLoginForm(prev => ({ ...prev, password: e.target.value }))}
+                        className="glass-input pl-10 h-12 border-white/10"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full glass-button h-12 text-base"
+                  >
+                    {isLoading ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Signing in...
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4" />
+                        Sign In
+                      </div>
+                    )}
+                  </Button>
+                </form>
+              </TabsContent>
+
+              <TabsContent value="signup" className="p-6 mt-0">
+                <form onSubmit={handleSignup} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground text-sm">Full Name</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Enter your name"
+                        value={signupForm.name}
+                        onChange={(e) => setSignupForm(prev => ({ ...prev, name: e.target.value }))}
+                        className="glass-input pl-10 h-12 border-white/10"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground text-sm">Phone Number</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="tel"
+                        placeholder="Enter your phone number"
+                        value={signupForm.phone}
+                        onChange={(e) => setSignupForm(prev => ({ ...prev, phone: e.target.value }))}
+                        className="glass-input pl-10 h-12 border-white/10"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground text-sm">Email</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="email"
+                        placeholder="Enter your email"
+                        value={signupForm.email}
+                        onChange={(e) => setSignupForm(prev => ({ ...prev, email: e.target.value }))}
+                        className="glass-input pl-10 h-12 border-white/10"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground text-sm">Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="password"
+                        placeholder="Create a password (min 6 chars)"
+                        value={signupForm.password}
+                        onChange={(e) => setSignupForm(prev => ({ ...prev, password: e.target.value }))}
+                        className="glass-input pl-10 h-12 border-white/10"
+                        minLength={6}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full glass-button h-12 text-base"
+                  >
+                    {isLoading ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Creating account...
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4" />
+                        Create Account
+                      </div>
+                    )}
+                  </Button>
+                </form>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+
+        {/* Setup hint */}
+        <div className="mt-6 text-center">
+          <p className="text-xs text-muted-foreground/60">
+            Powered by Supabase • Deployed on GitHub Pages
+          </p>
+          <p className="text-xs text-muted-foreground/40 mt-1">
+            Demo: Admin (000000/admin123) • Employee (111111/emp123) • Customer (123456/cust123)
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
