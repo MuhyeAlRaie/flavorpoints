@@ -108,7 +108,48 @@ CREATE INDEX IF NOT EXISTS idx_missions_customer ON public.missions(customer_id)
 CREATE INDEX IF NOT EXISTS idx_reward_redemptions_customer ON public.reward_redemptions(customer_id);
 
 -- =============================================
--- 3. ROW LEVEL SECURITY (RLS)
+-- 3. HELPER FUNCTIONS (SECURITY DEFINER - bypasses RLS to avoid recursion)
+-- =============================================
+-- IMPORTANT: These must be created BEFORE RLS policies that reference them!
+
+CREATE OR REPLACE FUNCTION public.get_current_user_role()
+RETURNS TEXT
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT role FROM public.customers WHERE id = auth.uid();
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT EXISTS (SELECT 1 FROM public.customers WHERE id = auth.uid() AND role = 'admin');
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_employee()
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT EXISTS (SELECT 1 FROM public.customers WHERE id = auth.uid() AND role = 'employee');
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_admin_or_employee()
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT EXISTS (SELECT 1 FROM public.customers WHERE id = auth.uid() AND role IN ('admin', 'employee'));
+$$;
+
+-- =============================================
+-- 4. ROW LEVEL SECURITY (RLS)
 -- =============================================
 ALTER TABLE public.customers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.visits ENABLE ROW LEVEL SECURITY;
@@ -130,19 +171,15 @@ CREATE POLICY "Users can update own profile"
   ON public.customers FOR UPDATE
   USING (auth.uid() = id);
 
--- Admins can read all customers
+-- Admins can read all customers (uses helper function to avoid recursion)
 CREATE POLICY "Admins can read all customers"
   ON public.customers FOR SELECT
-  USING (
-    EXISTS (SELECT 1 FROM public.customers WHERE id = auth.uid() AND role = 'admin')
-  );
+  USING (public.is_admin());
 
--- Employees can read all customers
+-- Employees can read all customers (uses helper function to avoid recursion)
 CREATE POLICY "Employees can read all customers"
   ON public.customers FOR SELECT
-  USING (
-    EXISTS (SELECT 1 FROM public.customers WHERE id = auth.uid() AND role = 'employee')
-  );
+  USING (public.is_employee());
 
 -- Anyone can insert (for signup)
 CREATE POLICY "Allow signup insert"
@@ -158,16 +195,12 @@ CREATE POLICY "Users can read own visits"
 -- Admins can read all visits
 CREATE POLICY "Admins can read all visits"
   ON public.visits FOR SELECT
-  USING (
-    EXISTS (SELECT 1 FROM public.customers WHERE id = auth.uid() AND role = 'admin')
-  );
+  USING (public.is_admin());
 
 -- Employees can read all visits
 CREATE POLICY "Employees can read all visits"
   ON public.visits FOR SELECT
-  USING (
-    EXISTS (SELECT 1 FROM public.customers WHERE id = auth.uid() AND role = 'employee')
-  );
+  USING (public.is_employee());
 
 -- Visits are created via RPC function (add_visit)
 
@@ -180,21 +213,15 @@ CREATE POLICY "Public read menu items"
 -- Admins can manage menu items
 CREATE POLICY "Admins can insert menu items"
   ON public.menu_items FOR INSERT
-  WITH CHECK (
-    EXISTS (SELECT 1 FROM public.customers WHERE id = auth.uid() AND role = 'admin')
-  );
+  WITH CHECK (public.is_admin());
 
 CREATE POLICY "Admins can update menu items"
   ON public.menu_items FOR UPDATE
-  USING (
-    EXISTS (SELECT 1 FROM public.customers WHERE id = auth.uid() AND role = 'admin')
-  );
+  USING (public.is_admin());
 
 CREATE POLICY "Admins can delete menu items"
   ON public.menu_items FOR DELETE
-  USING (
-    EXISTS (SELECT 1 FROM public.customers WHERE id = auth.uid() AND role = 'admin')
-  );
+  USING (public.is_admin());
 
 -- ---------- Rewards ----------
 -- Public read access
@@ -205,21 +232,15 @@ CREATE POLICY "Public read rewards"
 -- Admins can manage rewards
 CREATE POLICY "Admins can insert rewards"
   ON public.rewards FOR INSERT
-  WITH CHECK (
-    EXISTS (SELECT 1 FROM public.customers WHERE id = auth.uid() AND role = 'admin')
-  );
+  WITH CHECK (public.is_admin());
 
 CREATE POLICY "Admins can update rewards"
   ON public.rewards FOR UPDATE
-  USING (
-    EXISTS (SELECT 1 FROM public.customers WHERE id = auth.uid() AND role = 'admin')
-  );
+  USING (public.is_admin());
 
 CREATE POLICY "Admins can delete rewards"
   ON public.rewards FOR DELETE
-  USING (
-    EXISTS (SELECT 1 FROM public.customers WHERE id = auth.uid() AND role = 'admin')
-  );
+  USING (public.is_admin());
 
 -- ---------- Game History ----------
 -- Users can read their own game history
@@ -230,9 +251,7 @@ CREATE POLICY "Users can read own game history"
 -- Admins can read all game history
 CREATE POLICY "Admins can read all game history"
   ON public.game_history FOR SELECT
-  USING (
-    EXISTS (SELECT 1 FROM public.customers WHERE id = auth.uid() AND role = 'admin')
-  );
+  USING (public.is_admin());
 
 -- Game history is created via RPC function (play_game)
 
@@ -245,15 +264,11 @@ CREATE POLICY "Public read app settings"
 -- Admins can manage settings
 CREATE POLICY "Admins can insert app settings"
   ON public.app_settings FOR INSERT
-  WITH CHECK (
-    EXISTS (SELECT 1 FROM public.customers WHERE id = auth.uid() AND role = 'admin')
-  );
+  WITH CHECK (public.is_admin());
 
 CREATE POLICY "Admins can update app settings"
   ON public.app_settings FOR UPDATE
-  USING (
-    EXISTS (SELECT 1 FROM public.customers WHERE id = auth.uid() AND role = 'admin')
-  );
+  USING (public.is_admin());
 
 -- ---------- Missions ----------
 -- Users can read their own missions
@@ -264,9 +279,12 @@ CREATE POLICY "Users can read own missions"
 -- Admins can read all missions
 CREATE POLICY "Admins can read all missions"
   ON public.missions FOR SELECT
-  USING (
-    EXISTS (SELECT 1 FROM public.customers WHERE id = auth.uid() AND role = 'admin')
-  );
+  USING (public.is_admin());
+
+-- Employees can read all missions
+CREATE POLICY "Employees can read all missions"
+  ON public.missions FOR SELECT
+  USING (public.is_employee());
 
 -- Missions are managed via RPC functions
 
@@ -279,14 +297,12 @@ CREATE POLICY "Users can read own redemptions"
 -- Admins can read all redemptions
 CREATE POLICY "Admins can read all redemptions"
   ON public.reward_redemptions FOR SELECT
-  USING (
-    EXISTS (SELECT 1 FROM public.customers WHERE id = auth.uid() AND role = 'admin')
-  );
+  USING (public.is_admin());
 
 -- Redemptions are created via RPC function (redeem_reward)
 
 -- =============================================
--- 4. POSTGRESQL FUNCTIONS (RPC)
+-- 5. POSTGRESQL FUNCTIONS (RPC)
 -- =============================================
 
 -- ADD VISIT: Employee adds a visit for a customer
@@ -523,7 +539,7 @@ END;
 $$;
 
 -- =============================================
--- 5. SEED DATA
+-- 6. SEED DATA
 -- =============================================
 
 -- App Settings
